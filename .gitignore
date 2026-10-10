@@ -1,0 +1,20 @@
+auth/
+.env
+*.keystore
+*.jks
+local.properties
+.gradle/
+build/
+*.apk
+.DS_Store
+data/test/*.csv
+data/test/photos/
+graphify-out/
+
+# Datos personales (no versionar)
+docs/Pasos IMSS*.pdf
+docs/qa/Datos pruebas.md
+data/
+docs/qa/*-LINKS.json
+docs/qa/*-CELLS.json
+data/config.json

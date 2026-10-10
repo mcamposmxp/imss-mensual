@@ -1,0 +1,9 @@
+{
+  "screen_id": "paso-1",
+  "approved": "2026-10-10 (el humano entregó los datos y pidió llenar; confirmar si hay objeción)",
+  "map": {
+    "curp":     { "csv": "curp",   "transform": "upper" },
+    "correo":   { "csv": "correo", "transform": "lower" },
+    "confirma": { "csv": "correo", "transform": "lower" }
+  }
+}

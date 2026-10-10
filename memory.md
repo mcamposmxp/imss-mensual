@@ -1,0 +1,13 @@
+# Memoria del proyecto
+- Dispositivo de pruebas: Xiaomi 2412DPC0AG, Android 16, 1220x2712. adb WiFi 192.168.0.202:5555; instalar por USB (serial GUE6FMTOCYGA5TPV) porque por WiFi lo bloquea MIUI.
+- Compilar: JAVA_HOME=temurin-17, `./gradlew assembleDebug` en android-app/ (Gradle 8.9 wrapper).
+- Android 15+ es edge-to-edge: usar insets en Compose.
+- Pruebas nunca pasan del calendario/aceptar términos (1 constancia por CURP al mes).
+- Instalación por WiFi (`adb -s 192.168.0.202:5555 install -r`) funcionó el 2026-10-10 (v0.1.2) con el USB aún conectado; no probado sin cable. `adb_wifi_enabled=0` (la conexión es modo tcpip, se pierde al reiniciar el teléfono: reconectar con USB `adb tcpip 5555`). Los ajustes «Instalar vía USB» de HyperOS no se ven ni cambian por `settings`.
+- La app muestra versión + fecha de instalación (lastUpdateTime) bajo la barra superior y en el log `APP_START`.
+- Xiaomi bloquea `adb input swipe/tap` (INJECT_EVENTS): el desplazamiento y el captcha son manuales; usar broadcast de la app para las sondas.
+- Heurística de etiqueta de sondas: label[for] → label ancestro → contenedor más pequeño con ≤1 input (la anterior devolvía el botón de navegación).
+- Los PDF del Paso 5 son blobs generados por `showPDF/showLineCaptura` (POST finalizaSolicitud.do): capturar dentro de la página (hook), no desde Kotlin; no leer cookies.
+- Reinstalar mata la app y pierde la pantalla del flujo (depende del estado del servidor; navegar directo a la URL devuelve el Paso 1): no reinstalar a mitad de una exploración.
+- adb shell: los argumentos con espacios/acentos deben ir entre comillas dentro del comando remoto (`adb shell "am broadcast ... --es name 'Línea de captura'"`).
+- Guardas de pantalla por controles estables, no por títulos (cambian con UA móvil/PC).

@@ -1,0 +1,92 @@
+{
+  "screen_id": "paso-1",
+  "url_pattern": "^https://adodigital\\.imss\\.gob\\.mx/pth/",
+  "ready": {
+    "text_regex": "Datos de la persona empleadora",
+    "needs": [
+      "#curp",
+      "#captcha"
+    ]
+  },
+  "evidence": "docs/qa/2026-10-10-probe-paso1-FIELDS.json (app v0.2.1)",
+  "fields": [
+    {
+      "key": "curp",
+      "labels": [
+        "CURP*:"
+      ],
+      "kind": "text",
+      "required": true,
+      "order": 1,
+      "dom": {
+        "id": "curp",
+        "name": "curp",
+        "maxlength": 18
+      }
+    },
+    {
+      "key": "correo",
+      "labels": [
+        "Correo electrónico válido, el cual será asociado a tu CURP*:"
+      ],
+      "kind": "text",
+      "required": true,
+      "order": 2,
+      "dom": {
+        "id": "correo",
+        "name": "correo",
+        "maxlength": 200
+      }
+    },
+    {
+      "key": "confirma",
+      "labels": [
+        "Confirme su correo electrónico*:"
+      ],
+      "kind": "text",
+      "required": true,
+      "order": 3,
+      "depends_on": "correo",
+      "dom": {
+        "id": "confirma",
+        "name": "confirma",
+        "maxlength": 200
+      }
+    },
+    {
+      "key": "captcha",
+      "labels": [
+        "Escriba las letras de la imagen que se muestre*: (Use mayúsculas y minúsculas)"
+      ],
+      "kind": "captcha_human",
+      "required": true,
+      "order": 4,
+      "note": "Lo resuelve el humano; la app nunca lo llena. Un captcha distinto al inicial = alerta, pausar.",
+      "dom": {
+        "id": "captcha",
+        "name": "captcha",
+        "maxlength": 10
+      }
+    }
+  ],
+  "actions": [
+    {
+      "key": "continuar",
+      "labels": [
+        "Continuar"
+      ],
+      "kind": "button",
+      "irreversible": false,
+      "dom": {
+        "id": "continuar",
+        "type": "button"
+      }
+    }
+  ],
+  "unverified": [
+    "Qué pantalla sigue al pulsar Continuar (F3)",
+    "Si existe 'Aviso importante' como modal: la sonda general lo lista como heading",
+    "Si hay campos precargados/inmutables (ninguno visto en Paso 1)"
+  ],
+  "title": "Paso 1 · Iniciar trámite (CURP, correo, captcha)"
+}

@@ -1,0 +1,77 @@
+package com.maxipublica.imssmensual
+
+import android.webkit.WebView
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeoutOrNull
+import org.json.JSONObject
+
+/** Orquesta el llenado paso a paso (cap. 4.1). Un script JS = un mensaje de respuesta. */
+class FormFiller(private val webView: () -> WebView?, private val log: (String) -> Unit, private val hideKeyboard: () -> Unit) {
+    private var pending: CompletableDeferred<JSONObject>? = null
+    private var ready: CompletableDeferred<Boolean>? = null
+    var lastReady: String = ""   // último READY_RESULT (sin datos personales): para explicar por qué falló una guarda
+
+    fun onMessage(json: JSONObject) {
+        if (json.optString("type") == "READY_RESULT") lastReady = "textOk=${json.opt("textOk")} missing=${json.opt("missing")} bodyLen=${json.opt("bodyLen")}"
+        when (json.optString("type")) {
+            "FILL_RESULT", "FILL_ERROR" -> pending?.let { if (!it.isCompleted) it.complete(json) }
+            "READY_RESULT" -> ready?.let { if (!it.isCompleted) it.complete(json.optBoolean("ok")) }
+        }
+    }
+
+    suspend fun runStep(label: String, script: String, timeoutMs: Long = 15_000): JSONObject? {
+        val d = CompletableDeferred<JSONObject>(); pending = d
+        webView()?.post { webView()?.evaluateJavascript(script, null) }
+        val r = withTimeoutOrNull(timeoutMs) { d.await() }
+        if (r == null) log("[$label] TIMEOUT (sin respuesta)")
+        else log("[$label] ${if (r.optBoolean("ok")) "OK" else "FALLO"}: ${r.optString("message")}")
+        hideKeyboard(); delay(600)
+        return r
+    }
+
+    /** «Pantalla lista»: 2 lecturas OK consecutivas, cada 500 ms, hasta 20 s (cap. 2.5). */
+    suspend fun waitReady(script: String = ProbeScripts.READY): Boolean {
+        var okCount = 0
+        repeat(40) {
+            val d = CompletableDeferred<Boolean>(); ready = d
+            webView()?.post { webView()?.evaluateJavascript(script, null) }
+            val ok = withTimeoutOrNull(1500) { d.await() } ?: false
+            okCount = if (ok) okCount + 1 else 0
+            if (okCount >= 2) { delay(500); return true }
+            delay(500)
+        }
+        return false
+    }
+
+    /** Llena una pantalla según schema+mapping y una fila CSV. Devuelve true solo si todo lo requerido quedó verificado. */
+    suspend fun fill(schema: JSONObject, mapping: JSONObject, row: Map<String, String>): Boolean {
+        val screen = schema.optString("screen_id")
+        val url = webView()?.url.orEmpty()
+        if (!Regex(schema.optString("url_pattern")).containsMatchIn(url)) { log("[$screen] FALLO pantalla_desconocida (host/url) url=$url"); return false }
+        val rd = schema.getJSONObject("ready")
+        val needs = rd.getJSONArray("needs").let { a -> (0 until a.length()).map { a.getString(it) } }
+        if (!waitReady(ProbeScripts.ready(rd.getString("text_regex"), needs))) {
+            log("[$screen] FALLO pantalla_desconocida: no están los marcadores de esta pantalla (texto='${rd.getString("text_regex")}', controles=$needs) url=$url"); return false
+        }
+        val fields = schema.getJSONArray("fields")
+        val order = (0 until fields.length()).map { fields.getJSONObject(it) }.sortedBy { it.optInt("order") }
+        val map = mapping.getJSONObject("map")
+        for (f in order) {
+            val key = f.getString("key")
+            if (f.optString("kind") == "captcha_human") { log("[$key] omitido: lo resuelve el humano"); continue }
+            val m = map.optJSONObject(key) ?: run { log("[$key] sin mapeo, omitido"); return@run null } ?: continue
+            val raw = row[m.getString("csv")].orEmpty()
+            val value = CsvSource.transform(raw, m.optString("transform").ifEmpty { null })
+            if (value.isEmpty()) { log("[$key] valor vacío en CSV: no se toca"); continue }   // vacío = no tocar (L23)
+            val labels = f.getJSONArray("labels").let { a -> (0 until a.length()).map { a.getString(it) } }
+            val dom = f.optJSONObject("dom")?.optString("id").orEmpty()
+            val r = runStep(key, FillScripts.text(key, labels, dom, value))
+            if (r?.optBoolean("ok") != true && f.optBoolean("required")) {
+                log("[$screen] STOP campo_requerido_fallido: $key"); return false
+            }
+        }
+        log("[$screen] LLENADO COMPLETO. Falta captcha y Continuar (humano).")
+        return true
+    }
+}
