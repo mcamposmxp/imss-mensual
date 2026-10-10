@@ -15,7 +15,7 @@ descarga el **Comprobante** y la **Línea de captura** y los envía por **correo
 
 - **Un humano confirma las acciones finales.** El captcha y «Continuar» los hace una persona;
   el envío del correo o del mensaje de WhatsApp lo pulsa una persona. La app no acepta términos
-  ni envía nada por sí sola.
+  ni envía nada por sí sola..
 - **Sin evidencia no hay «funciona»:** cada afirmación se respalda con el log del dispositivo
   (etiqueta `ImssForm`).
 - Los controles se localizan por **texto de etiqueta**, no por clases CSS.
