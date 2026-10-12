@@ -7,7 +7,7 @@ Evidencia: `docs/qa/2026-10-10-v0.1.1-f0-arranque-reinicio-GUE6FMTOCYGA5TPV.log`
 Hecho: menú «Sondas» (general, fields, buttons, ready), disparo por adb solo en debug (`am broadcast -a com.maxipublica.imssmensual.TEST --es cmd probe --es name <x>`), salida completa en `files/probes/PROBE_*.json` (sin valores de campos). Esquema: `schemas/paso-1.json`; columnas: `docs/csv-schema.md`.
 Evidencia: `docs/qa/2026-10-10-probe-paso1-{GENERAL,FIELDS,BUTTONS}.json`. Paso 1 = CURP, correo, confirmar correo, captcha, botón Continuar. Las etiquetas de la sonda coinciden con la captura de pantalla del Xiaomi.
 Pendiente para cerrar: que el humano valide el `FormSchema` del Paso 1 contra la página.
-No hecho a propósito: sondar pasos 2–4 requiere resolver el captcha (humano) y avanzar, es F3 / modo descubrimiento.
+No hecho a propósito: sondar pasos 2–4 requiere avanzar con un CURP real, es F3 / modo descubrimiento.
 
 ## Hallazgos del flujo real (2026-10-10, sesión de descubrimiento, v0.3.x)
 - Paso 1 → Continuar → (con CURP de pruebas que ya tenía trámite del mes) la app llegó directo a `https://adodigital.imss.gob.mx/pth/RegistraDomicilio.do`, pantalla «Paso 5 Líneas de pago»: tabla con período, monto, fecha límite y columnas **Comprobante** (ícono documento), **Línea de captura** (ícono QR) y **Pago en línea** (botón «Ver bancos», `onclick=showModal(...)`, id numérico).
@@ -37,3 +37,8 @@ Evidencia del log del dispositivo (Xiaomi 2412DPC0AG, Android 16):
 - Menú «Llenar ▾ → Paso 5. Líneas de pago ▸ → Enviar por correo / Enviar por WhatsApp» (con diálogo de confirmación). El botón suelto «Documentos» se eliminó.
 - WhatsApp: `ACTION_SEND_MULTIPLE` application/pdf con `setPackage` (com.whatsapp y/o com.whatsapp.w4b, declarados en `<queries>`); el contacto lo elige el humano (WhatsApp no permite prellenarlo con adjuntos) y el humano pulsa Enviar.
 - Confirmado por el humano: se envió a un contacto elegido por él y funcionó. (Evidencia de la app: ver log `[docs]`.)
+
+## Captcha del Paso 1 con Anti-Captcha (v0.8.0, 2026-10-11)
+Evidencia del log del dispositivo: `getBalance` → clave válida; imagen capturada 220x40 (canvas del `<img>` mostrado, sin volver a pedirla); `ImageToTextTask` resuelta en 5 s, len=5, costo 0.0006 USD; valor releído verificado (P4). Confirmado por el humano: el sitio aceptó el captcha al pulsar Continuar (1 prueba; la tasa de acierto real aún no está medida).
+Salvaguardas: clave solo en `.env`/`files/.env` (600), nunca en log (enmascarado hex-32); https solo a api.anti-captcha.com sin redirecciones; tope diario 0.50 USD; sin reintentos automáticos; sin clave → el humano.
+Pendiente: medir tasa de acierto con más pruebas; usar `reportIncorrectImageCaptcha` (solo dentro de 60 s tras terminar la tarea) si el sitio rechaza; revisar términos de uso del portal del IMSS.

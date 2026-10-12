@@ -74,4 +74,25 @@ target.scrollIntoView({block:'center'}); await sleep(300);
 fullClick(target);
 send({type:'FILL_RESULT',field:'click',ok:true,message:'clic en '+target.tagName.toLowerCase()+' bajo "'+hdr+'"'});
 """)
+
+    /** Extrae la imagen del captcha YA MOSTRADA (canvas.toDataURL). No se vuelve a pedir la URL: podría generar otro captcha distinto. */
+    fun captchaImage(labels: List<String>, domId: String): String {
+        val l = labels.joinToString(prefix = "[", postfix = "]") { JSONObject.quote(it) }
+        return wrap("""
+var f=findInput($l, ${JSONObject.quote(domId)});
+if(!f){ send({type:'CAPTCHA_IMG',ok:false,reason:'etiqueta_no_encontrada'}); return; }
+var img=null, c=f.el;
+for(var u=0;u<6&&c&&!img;u++){ c=c.parentElement; if(!c) break;
+  var im=c.querySelectorAll('img');
+  for(var k=0;k<im.length;k++){ var r=im[k].getBoundingClientRect();
+    if(im[k].complete&&im[k].naturalWidth>0&&r.width>=40&&r.width<=500&&r.height>=15&&r.height<=200){ img=im[k]; break; } } }
+if(!img){ send({type:'CAPTCHA_IMG',ok:false,reason:'imagen_no_encontrada'}); return; }
+try{
+  var cv=document.createElement('canvas'); cv.width=img.naturalWidth; cv.height=img.naturalHeight;
+  cv.getContext('2d').drawImage(img,0,0);
+  var d=cv.toDataURL('image/png');
+  send({type:'CAPTCHA_IMG',ok:true,w:cv.width,h:cv.height,b64:d.substring(d.indexOf(',')+1)});
+}catch(e){ send({type:'CAPTCHA_IMG',ok:false,reason:'canvas_no_legible',message:String(e&&e.message||e)}); }
+""")
+    }
 }

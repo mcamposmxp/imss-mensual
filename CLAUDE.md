@@ -9,7 +9,8 @@ App Android nativa (Kotlin + Jetpack Compose) en `android-app/` que, dada una UR
 - Kotlin nativo; sin migrar a Expo/Flutter/iOS sin decisión explícita.
 - Nunca ejecutes la acción final irreversible (aceptar términos y obtener constancia/pago) sin confirmación humana explícita tras completar el formulario. La acepta el usuario del dispositivo, a mano.
 - **Las pruebas nunca ejecutan el paso posterior a seleccionar el calendario y aceptar términos.** Solo se obtiene un documento final por CURP al mes. El modo prueba lo bloquea (`UiRegistry.blocked`).
-- Captcha inicial: lo resuelve el humano. Un captcha distinto al inicial, aviso inesperado, bloqueo o pantalla desconocida es señal de alerta: pausar la sesión y reportar; no insistir.
+- Captcha del Paso 1: lo resuelve el servicio **Anti-Captcha** (`ImageToTextTask`) desde la app; sin clave en `files/.env` lo resuelve el humano. Decisión del humano (2026-10-11); los términos de uso del sitio siguen sin revisarse a fondo. Un captcha distinto al del Paso 1, rechazado dos veces, aviso inesperado, bloqueo o pantalla desconocida es señal de alerta: pausar la sesión y reportar; no insistir. Un humano sigue pulsando «Continuar».
+- La clave `ANTICAPTCHA_KEY` vive en `.env` (fuera de git, permisos 600) y se copia al teléfono en `files/.env`. NUNCA leerla, registrarla ni versionarla; el log enmascara cadenas hex de 32 caracteres. Solo https a `api.anti-captcha.com`; tope diario de gasto 0.50 USD por defecto (`ANTICAPTCHA_DAILY_CAP_USD`); sin reintentos automáticos.
 - Subida de archivos «cero toques» (si aparecen adjuntos): JS localiza + `scrollIntoView`; Kotlin simula el toque nativo; el `WebChromeClient` entrega los archivos. `input.click()` por JS no sirve.
 - UA del WebView configurable (por omisión de escritorio).
 - Localiza controles por TEXTO de etiqueta (español de México), nunca por clases CSS. El nombre técnico del campo (`name`/`id`) es solo respaldo.
@@ -36,7 +37,7 @@ App Android nativa (Kotlin + Jetpack Compose) en `android-app/` que, dada una UR
 4. API oficial: no existe.
 
 **Acceso**
-5. No hay login con sesión. Se capturan CURP y correo en el formulario; hay captcha inicial (lo resuelve el humano). Un captcha distinto del inicial = alerta, pausar.
+5. No hay login con sesión. Se capturan CURP y correo en el formulario; hay captcha inicial, resuelto por Anti-Captcha (decisión del 2026-10-11; verificado en el dispositivo: el sitio lo aceptó). Un captcha distinto del inicial = alerta, pausar.
 6. Idioma/región: solo español de México (sin etiquetas bilingües).
 
 **Datos**

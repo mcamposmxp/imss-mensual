@@ -75,6 +75,23 @@ class MainActivity : ComponentActivity() {
         }
 
     private val docCapture = DocCapture(formFiller) { AppLog.log(it) }
+    private val antiCaptcha by lazy { AntiCaptcha(filesDir) { AppLog.log(it) } }
+    private var captchaImg: kotlinx.coroutines.CompletableDeferred<org.json.JSONObject>? = null
+
+    /** Resuelve el captcha de imagen con el servicio y lo escribe en el campo (verificando el valor releído). Sin clave → lo hace el humano. */
+    private suspend fun solveCaptchaField(f: org.json.JSONObject): Boolean {
+        if (!antiCaptcha.available()) { AppLog.log("[captcha] sin ANTICAPTCHA_KEY: lo resuelve el humano"); return true }
+        val labels = f.getJSONArray("labels").let { a -> (0 until a.length()).map { a.getString(it) } }
+        val dom = f.optJSONObject("dom")
+        val d = kotlinx.coroutines.CompletableDeferred<org.json.JSONObject>(); captchaImg = d
+        webView?.post { webView?.evaluateJavascript(FillScripts.captchaImage(labels, dom?.optString("id").orEmpty()), null) }
+        val img = kotlinx.coroutines.withTimeoutOrNull(10_000) { d.await() }
+        if (img == null || !img.optBoolean("ok")) { AppLog.log("[captcha] FALLO captura de imagen: ${img?.optString("reason") ?: "timeout"}"); return false }
+        AppLog.log("[captcha] imagen capturada ${img.optInt("w")}x${img.optInt("h")}")
+        val solved = antiCaptcha.solve(img.getString("b64"), dom?.optInt("maxlength", 10) ?: 10) ?: return false
+        val r = formFiller.runStep(f.getString("key"), FillScripts.text(f.getString("key"), labels, dom?.optString("id").orEmpty(), solved.text))
+        return r?.optBoolean("ok") == true
+    }
     private var confirmDocs by mutableStateOf<String?>(null)   // null | "mail" | "whatsapp"
 
     private fun mailTo(): String = try {
@@ -150,6 +167,7 @@ class MainActivity : ComponentActivity() {
         val rows = CsvSource.parse(f.readText())
         if (rows.isEmpty()) { AppLog.log("FILL FALLO: CSV sin filas"); return }
         fillActive = true
+        formFiller.captchaSolver = { f -> solveCaptchaField(f) }
         lifecycleScope.launch {
             try {
                 val schema = org.json.JSONObject(asset("$id.json"))
@@ -235,9 +253,9 @@ class MainActivity : ComponentActivity() {
             @JavascriptInterface
             fun postMessage(data: String) {
                 val type = try { org.json.JSONObject(data).optString("type") } catch (_: Exception) { "" }
-                if (type == "DOC") AppLog.log("BRIDGE DOC (${data.length} car.)") else AppLog.log("BRIDGE $data")   // nunca volcar el contenido
+                if (type == "DOC" || type == "CAPTCHA_IMG") AppLog.log("BRIDGE $type (${data.length} car.)") else AppLog.log("BRIDGE $data")   // nunca volcar el contenido
                 saveProbe(data)
-                try { val j = org.json.JSONObject(data); formFiller.onMessage(j); docCapture.onMessage(j) } catch (_: Exception) {}
+                try { val j = org.json.JSONObject(data); formFiller.onMessage(j); docCapture.onMessage(j); if (type == "CAPTCHA_IMG") captchaImg?.let { if (!it.isCompleted) it.complete(j) } } catch (_: Exception) {}
             }
         }, "AppBridge")
     }
@@ -276,6 +294,7 @@ class MainActivity : ComponentActivity() {
                     when (val cmd = i.getStringExtra("cmd").orEmpty()) {
                         "probe" -> runProbe(i.getStringExtra("name").orEmpty())
                         "open" -> webView?.loadUrl(START_URL)
+                        "captcha_balance" -> lifecycleScope.launch { antiCaptcha.balance() }
                         "docs" -> downloadAndSendDocs(i.getStringExtra("name").orEmpty().ifEmpty { "mail" })
                         "click" -> lifecycleScope.launch {
                             formFiller.runStep("click", FillScripts.clickColumn(i.getStringExtra("name").orEmpty()))

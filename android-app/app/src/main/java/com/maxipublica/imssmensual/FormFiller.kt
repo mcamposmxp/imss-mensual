@@ -10,6 +10,7 @@ import org.json.JSONObject
 class FormFiller(private val webView: () -> WebView?, private val log: (String) -> Unit, private val hideKeyboard: () -> Unit) {
     private var pending: CompletableDeferred<JSONObject>? = null
     private var ready: CompletableDeferred<Boolean>? = null
+    var captchaSolver: (suspend (JSONObject) -> Boolean)? = null   // resuelve campos kind=captcha_image; null = lo hace el humano
     var lastReady: String = ""   // último READY_RESULT (sin datos personales): para explicar por qué falló una guarda
 
     fun onMessage(json: JSONObject) {
@@ -60,6 +61,12 @@ class FormFiller(private val webView: () -> WebView?, private val log: (String) 
         for (f in order) {
             val key = f.getString("key")
             if (f.optString("kind") == "captcha_human") { log("[$key] omitido: lo resuelve el humano"); continue }
+            if (f.optString("kind") == "captcha_image") {
+                val solver = captchaSolver
+                if (solver == null) { log("[$key] omitido: lo resuelve el humano"); continue }
+                if (!solver(f) && f.optBoolean("required")) { log("[$screen] STOP campo_requerido_fallido: $key"); return false }
+                continue
+            }
             val m = map.optJSONObject(key) ?: run { log("[$key] sin mapeo, omitido"); return@run null } ?: continue
             val raw = row[m.getString("csv")].orEmpty()
             val value = CsvSource.transform(raw, m.optString("transform").ifEmpty { null })
@@ -71,7 +78,7 @@ class FormFiller(private val webView: () -> WebView?, private val log: (String) 
                 log("[$screen] STOP campo_requerido_fallido: $key"); return false
             }
         }
-        log("[$screen] LLENADO COMPLETO. Falta captcha y Continuar (humano).")
+        log("[$screen] LLENADO COMPLETO. Falta revisar el captcha y Continuar (humano).")
         return true
     }
 }

@@ -13,9 +13,10 @@ descarga el **Comprobante** y la **Línea de captura** y los envía por **correo
 
 ## Principios
 
-- **Un humano confirma las acciones finales.** El captcha y «Continuar» los hace una persona;
-  el envío del correo o del mensaje de WhatsApp lo pulsa una persona. La app no acepta términos
-  ni envía nada por sí sola..
+- **Un humano confirma las acciones finales.** «Continuar» y el envío del correo o de WhatsApp
+  los pulsa una persona. El captcha del Paso 1 lo resuelve el servicio Anti-Captcha si hay clave;
+  si no, una persona. La app no acepta términos
+  ni envía nada por sí sola.
 - **Sin evidencia no hay «funciona»:** cada afirmación se respalda con el log del dispositivo
   (etiqueta `ImssForm`).
 - Los controles se localizan por **texto de etiqueta**, no por clases CSS.
@@ -57,19 +58,21 @@ La carpeta `data/` no se versiona. Para usar la app se necesitan, copiados al te
 |---|---|
 | `data/input.csv` | Columnas `curp,correo` (una fila por trámite). |
 | `data/config.json` | `{"mail_to": "<correo destino>"}` |
+| `.env` (raíz) | `ANTICAPTCHA_KEY=<clave>` y opcional `ANTICAPTCHA_DAILY_CAP_USD` (0.50 por defecto). Se copia a `files/.env` con `chmod 600`. |
 
 ## Uso
 
 1. Abre la app: carga el Paso 1 del sitio.
 2. **Llenar ▾ → Paso 1**: llena CURP, correo y confirmación y verifica cada valor releyéndolo.
-3. Una persona escribe el **captcha** y pulsa **Continuar**.
+3. El captcha se resuelve solo (Anti-Captcha: ~5 s y ~0.0006 USD en la prueba); una persona lo revisa y pulsa **Continuar**.
+   `captcha_balance` por adb valida la clave.
 4. En el Paso 5: **Llenar ▾ → Paso 5. Líneas de pago ▸ → Enviar por correo / Enviar por WhatsApp**.
    La app captura los dos PDF (todo o nada) y abre el correo o WhatsApp con los adjuntos; la
    persona elige contacto, revisa y pulsa Enviar.
 5. El menú **Sondas** vuelca la estructura del DOM de la pantalla actual (solo lectura).
 
 También se puede disparar por adb (solo en debug):
-`adb shell "am broadcast -a com.maxipublica.imssmensual.TEST --es cmd <fill|probe|docs|click|goto> --es name <valor>"`.
+`adb shell "am broadcast -a com.maxipublica.imssmensual.TEST --es cmd <fill|probe|docs|click|goto|captcha_balance> --es name <valor>"`.
 Los argumentos con espacios o acentos van entre comillas **dentro** del comando remoto.
 
 ## Estructura
@@ -91,5 +94,7 @@ Los argumentos con espacios o acentos van entre comillas **dentro** del comando 
 - Los íconos de descarga del Paso 5 hacen `POST finalizaSolicitud.do`. No se ha confirmado qué
   registra el servidor con un CURP sin trámite previo.
 - Un captcha distinto del inicial, un aviso o un bloqueo del sitio son señales de alerta: pausar.
+- El captcha se envía como imagen a un tercero (personas que lo resuelven); no lleva datos personales.
+  Resolverlo así evita un control anti-bot del sitio: los términos de uso específicos del portal no están revisados.
 - Los términos de uso del sitio son desconocidos; la decisión de automatizar la asume el usuario.
 - Los PDF descargados contienen datos personales: se guardan solo en la caché privada de la app.

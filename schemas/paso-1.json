@@ -58,15 +58,16 @@
       "labels": [
         "Escriba las letras de la imagen que se muestre*: (Use mayúsculas y minúsculas)"
       ],
-      "kind": "captcha_human",
+      "kind": "captcha_image",
       "required": true,
       "order": 4,
-      "note": "Lo resuelve el humano; la app nunca lo llena. Un captcha distinto al inicial = alerta, pausar.",
+      "note": "Un captcha distinto al inicial o rechazado dos veces = alerta, pausar.",
       "dom": {
         "id": "captcha",
         "name": "captcha",
         "maxlength": 10
-      }
+      },
+      "solver": "anticaptcha (ImageToTextTask, case-sensitive); sin clave en files/.env lo resuelve el humano"
     }
   ],
   "actions": [
