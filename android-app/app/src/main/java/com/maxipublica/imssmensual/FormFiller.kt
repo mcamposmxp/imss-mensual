@@ -67,15 +67,40 @@ class FormFiller(private val webView: () -> WebView?, private val log: (String) 
                 if (!solver(f) && f.optBoolean("required")) { log("[$screen] STOP campo_requerido_fallido: $key"); return false }
                 continue
             }
-            val m = map.optJSONObject(key) ?: run { log("[$key] sin mapeo, omitido"); return@run null } ?: continue
-            val raw = row[m.getString("csv")].orEmpty()
-            val value = CsvSource.transform(raw, m.optString("transform").ifEmpty { null })
-            if (value.isEmpty()) { log("[$key] valor vacío en CSV: no se toca"); continue }   // vacío = no tocar (L23)
+            val kind = f.optString("kind")
             val labels = f.getJSONArray("labels").let { a -> (0 until a.length()).map { a.getString(it) } }
             val dom = f.optJSONObject("dom")?.optString("id").orEmpty()
-            val r = runStep(key, FillScripts.text(key, labels, dom, value))
+            if (kind == "readonly") {   // lo rellena el sitio (p. ej. tras «Buscar»): solo se verifica
+                val r = runStep(key, FillScripts.readonlyFilled(key, labels, dom))
+                if (r?.optBoolean("ok") != true && f.optBoolean("required")) { log("[$screen] STOP campo_requerido_fallido: $key"); return false }
+                continue
+            }
+            val m = map.optJSONObject(key) ?: run { log("[$key] sin mapeo, omitido"); null } ?: continue
+            val value: String = if (m.has("const")) m.get("const").toString()
+                else CsvSource.transform(row[m.getString("csv")].orEmpty(), m.optString("transform").ifEmpty { null })
+            if (value.isEmpty()) { log("[$key] valor vacío en CSV: no se toca"); continue }   // vacío = no tocar (L23)
+            if (m.has("const") && kind == "checkbox") log("[$key] marcado por la automatización (decisión del usuario)")
+            val r = when (kind) {
+                "text" -> runStep(key, FillScripts.text(key, labels, dom, value))
+                "text_lookup" -> {
+                    val t = runStep(key, FillScripts.text(key, labels, dom, value))
+                    val lk = f.getJSONObject("lookup")
+                    val lkLabels = lk.getJSONArray("button_labels").let { a -> (0 until a.length()).map { a.getString(it) } }
+                    if (t?.optBoolean("ok") == true) runStep("$key:buscar", FillScripts.clickButton("$key:buscar", lkLabels, lk.optString("dom"))) else t
+                }
+                "select_native" -> runStep(key, FillScripts.selectNative(key, labels, dom, value), 30_000)
+                "checkbox" -> runStep(key, FillScripts.setCheckbox(key, labels, dom, value.toBoolean()))
+                else -> { log("[$key] tipo '$kind' no soportado"); null }
+            }
             if (r?.optBoolean("ok") != true && f.optBoolean("required")) {
                 log("[$screen] STOP campo_requerido_fallido: $key"); return false
+            }
+        }
+        // Solo informa del botón de avance; NUNCA lo pulsa
+        schema.optJSONArray("actions")?.let { acts ->
+            for (i in 0 until acts.length()) {
+                val ac = acts.getJSONObject(i)
+                if (ac.optString("key") == "continuar") runStep("continuar", FillScripts.buttonState("continuar", ac.optJSONObject("dom")?.optString("id").orEmpty()))
             }
         }
         log("[$screen] LLENADO COMPLETO. Falta revisar el captcha y Continuar (humano).")

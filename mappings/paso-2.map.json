@@ -1,0 +1,36 @@
+{
+  "screen_id": "paso-2",
+  "approved": "2026-10-11 (el humano entregó los datos de prueba y pidió llenarlos)",
+  "map": {
+    "tel_celular": {
+      "csv": "tel_celular",
+      "transform": "digits"
+    },
+    "correo_alterno": {
+      "csv": "correo_alterno",
+      "transform": "lower"
+    },
+    "cp": {
+      "csv": "cp",
+      "transform": "digits"
+    },
+    "colonia": {
+      "csv": "colonia"
+    },
+    "calle": {
+      "csv": "calle"
+    },
+    "num_ext": {
+      "csv": "num_ext"
+    },
+    "num_int": {
+      "csv": "num_int"
+    },
+    "subdelegacion": {
+      "csv": "subdelegacion"
+    },
+    "manifiesto": {
+      "const": true
+    }
+  }
+}

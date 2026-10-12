@@ -42,3 +42,11 @@ Evidencia del log del dispositivo (Xiaomi 2412DPC0AG, Android 16):
 Evidencia del log del dispositivo: `getBalance` → clave válida; imagen capturada 220x40 (canvas del `<img>` mostrado, sin volver a pedirla); `ImageToTextTask` resuelta en 5 s, len=5, costo 0.0006 USD; valor releído verificado (P4). Confirmado por el humano: el sitio aceptó el captcha al pulsar Continuar (1 prueba; la tasa de acierto real aún no está medida).
 Salvaguardas: clave solo en `.env`/`files/.env` (600), nunca en log (enmascarado hex-32); https solo a api.anti-captcha.com sin redirecciones; tope diario 0.50 USD; sin reintentos automáticos; sin clave → el humano.
 Pendiente: medir tasa de acierto con más pruebas; usar `reportIncorrectImageCaptcha` (solo dentro de 60 s tras terminar la tarea) si el sitio rechaza; revisar términos de uso del portal del IMSS.
+
+## Paso 2 · Persona empleadora (v0.10.0, 2026-10-11): VERIFICADO
+Sondeo (`docs/qa/2026-10-11-probe-paso2-*.json`; el texto con datos de RENAPO queda fuera de git): bloque de RENAPO solo lectura; contacto (teléfono, correo alterno opcional); domicilio con CP + «Buscar» (AJAX `consultaDomicilioAjax.do`) que rellena Estado/Municipio y las colonias; subdelegación que carga al elegir la colonia; casilla del manifiesto; Continuar deshabilitado hasta completar.
+Recetas nuevas: `selectNative` (por texto de opción, con espera a que carguen), `setCheckbox`, `clickButton`, `readonlyFilled`, `buttonState` (solo informa, nunca pulsa Continuar).
+Evidencia del log: tel, cp, calle, num_ext verificados; Buscar → estado/municipio rellenados por el sitio; colonia y subdelegación aplicadas; casilla=true; `continuar habilitado=true`. El humano confirmó que la colonia elegida es la correcta.
+Decisión del usuario: la automatización marca el manifiesto (declaración legal); el humano pulsa Continuar.
+Pendiente menor: el mensaje final dice «revisar el captcha» también en pasos sin captcha (cosmético; se corrige en la próxima versión).
+Siguiente: Paso 3 (persona trabajadora) y Paso 4 (confirmación), y el calendario de 21 días hábiles.

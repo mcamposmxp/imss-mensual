@@ -38,7 +38,7 @@ send({type:'PROBE_GENERAL', url:location.href, title:document.title,
     val FIELDS = wrap("""
 var items=[].slice.call(document.querySelectorAll('input,textarea,select')).filter(function(e){
   var t=(e.getAttribute('type')||'').toLowerCase(); return t!=='hidden'; }).map(function(e){
-  var opts=null; if(e.tagName==='SELECT'){ opts=[].slice.call(e.options).slice(0,40).map(function(o){return clean(o.text).substring(0,60);}); }
+  var opts=null; if(e.tagName==='SELECT'){ opts=[].slice.call(e.options).slice(0,150).map(function(o){return clean(o.text).substring(0,60);}); }
   return {tag:e.tagName.toLowerCase(), type:e.getAttribute('type')||'', name:e.getAttribute('name')||'', id:e.id||'',
     aria:e.getAttribute('aria-label')||'', placeholder:e.getAttribute('placeholder')||'', label:near(e),
     required:e.required||e.getAttribute('aria-required')==='true', maxlength:e.getAttribute('maxlength')||'',
@@ -90,6 +90,38 @@ send({type:'PROBE_CELLS', url:location.href, tables:out});
     val READY = wrap("""
 var bt=document.body?(document.body.innerText||''):'';
 send({type:'READY_RESULT', ok:document.querySelectorAll('input,select,textarea').length>0, url:location.href, bodyLen:bt.length});
+""")
+
+    /** Radios, casillas y switches agrupados por name, con el texto de cada opción. Solo lectura. */
+    val CHOICES = wrap("""
+var els=[].slice.call(document.querySelectorAll('input[type=radio],input[type=checkbox],[role=radio],[role=checkbox],[role=switch]'));
+var groups={};
+els.forEach(function(e){ var k=(e.getAttribute('name')||e.getAttribute('role')||'sin-nombre');
+  var lbl=''; if(e.id){ var l=document.querySelector('label[for="'+e.id+'"]'); if(l) lbl=clean(l.textContent); }
+  if(!lbl){ var al=e.closest('label'); if(al) lbl=clean(al.textContent); }
+  if(!lbl) lbl=clean((e.parentElement&&e.parentElement.innerText)||'');
+  var fs=e.closest('fieldset'); var leg=fs&&fs.querySelector('legend')?clean(fs.querySelector('legend').textContent):'';
+  (groups[k]=groups[k]||{name:k,legend:leg,items:[]}).items.push({type:e.getAttribute('type')||e.getAttribute('role'),id:e.id||'',value:(e.getAttribute('value')||'').substring(0,40),
+    label:lbl.substring(0,70),checked:(e.checked===true)||e.getAttribute('aria-checked')==='true',visible:vis(e),disabled:!!e.disabled}); });
+send({type:'PROBE_CHOICES', url:location.href, groups:Object.keys(groups).map(function(k){return groups[k];}).slice(0,40)});
+""")
+
+    /** Diálogos/listas/menús/modales visibles con sus opciones (texto). No hace clic en nada. */
+    val DIALOGS = wrap("""
+var ds=[].slice.call(document.querySelectorAll('[role=dialog],[role=listbox],[role=menu],.modal,.dropdown-menu,ul[role],[aria-modal=true]')).filter(vis);
+send({type:'PROBE_DIALOGS', url:location.href, count:ds.length, dialogs:ds.slice(0,8).map(function(d){
+  return {tag:d.tagName.toLowerCase(), role:d.getAttribute('role')||'', id:d.id||'', cls:(typeof d.className==='string'?d.className:'').substring(0,50),
+    text:clean(d.innerText).substring(0,300),
+    options:[].slice.call(d.querySelectorAll('[role=option],li,a,button,label')).slice(0,40).map(function(o){return clean(o.innerText).substring(0,50);})}; })});
+""")
+
+    /** Texto visible de la pantalla y títulos (para documentar el paso). Puede contener datos personales: el archivo queda fuera de git. */
+    val TEXT = wrap("""
+var main=document.querySelector('main')||document.body;
+send({type:'PROBE_TEXT', url:location.href, title:document.title,
+  headings:[].slice.call(document.querySelectorAll('h1,h2,h3,h4,legend,.panel-title')).filter(vis).map(function(h){return clean(h.textContent).substring(0,90);}).slice(0,40),
+  labels:[].slice.call(document.querySelectorAll('label')).filter(vis).map(function(l){return clean(l.textContent).substring(0,90);}).slice(0,80),
+  text:clean(main.innerText).substring(0,4000)});
 """)
 
     /** Código fuente (enmascarado) de las funciones del sitio que disparan las descargas. Solo lectura. */
@@ -144,6 +176,6 @@ send({type:'READY_RESULT', ok:textOk&&missing.length===0, textOk:textOk, missing
     }
 
     val ALL = linkedMapOf(
-        "general" to GENERAL, "fields" to FIELDS, "buttons" to BUTTONS, "links" to LINKS, "cells" to CELLS, "fn" to FN, "hook" to HOOK, "capture" to CAPTURE, "ready" to READY,
+        "general" to GENERAL, "fields" to FIELDS, "buttons" to BUTTONS, "links" to LINKS, "cells" to CELLS, "fn" to FN, "hook" to HOOK, "capture" to CAPTURE, "choices" to CHOICES, "dialogs" to DIALOGS, "text" to TEXT, "ready" to READY,
     )
 }

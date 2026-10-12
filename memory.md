@@ -13,3 +13,5 @@
 - Guardas de pantalla por controles estables, no por títulos (cambian con UA móvil/PC).
 - Anti-Captcha: clave en `.env` (nunca leerla); copiar a files/.env con `adb shell "run-as <pkg> sh -c 'cat > files/.env && chmod 600 files/.env'" < .env`. La imagen se captura del canvas del <img> ya mostrado (volver a pedir la URL podría generar otro captcha). getBalance: máx. 1 cada 30 s.
 - Si adb WiFi "no encuentra" el dispositivo tras un rato: `adb kill-server; adb connect <IP>:5555` (el servidor adb se cuelga).
+- Paso 2: `select` nativo por texto (sin acentos/mayúsculas), esperando a que carguen opciones (colonias tras «Buscar»; subdelegación tras elegir colonia). Los logs no deben incluir texto de colonia/calle (domicilio).
+- Desplegar: la app instalada ya es el código commiteado; reinstalar a mitad de un recorrido pierde la pantalla.

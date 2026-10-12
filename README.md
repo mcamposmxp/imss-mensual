@@ -5,9 +5,9 @@ App Android nativa (Kotlin + Jetpack Compose + WebView) que automatiza el llenad
 (`https://adodigital.imss.gob.mx/pth/editarTrabajador.do`) a partir de un CSV, y que al final
 descarga el **Comprobante** y la **Línea de captura** y los envía por **correo** o **WhatsApp**.
 
-> Estado: en desarrollo (v0.7.0). Probado en un Xiaomi 2412DPC0AG con Android 16.
-> Lo implementado y verificado: Paso 1 (CURP, correo, confirmación), captura de los PDF del
-> Paso 5 y envío por correo y WhatsApp. **Pasos 2, 3 y 4 y el calendario de 21 días hábiles
+> Estado: en desarrollo (v0.10.0). Probado en un Xiaomi 2412DPC0AG con Android 16.
+> Lo implementado y verificado: Pasos 1 y 2 (con captcha resuelto por servicio), captura de los PDF del
+> Paso 5 y envío por correo y WhatsApp. **Pasos 3 y 4 y el calendario de 21 días hábiles
 > aún no están hechos.** Detalle y evidencia en
 > [docs/plan/estado-y-siguientes-pasos.md](docs/plan/estado-y-siguientes-pasos.md).
 
@@ -56,14 +56,15 @@ La carpeta `data/` no se versiona. Para usar la app se necesitan, copiados al te
 
 | Archivo | Contenido |
 |---|---|
-| `data/input.csv` | Columnas `curp,correo` (una fila por trámite). |
+| `data/input.csv` | Una fila por trámite; columnas de todos los pasos: `curp,correo,tel_celular,correo_alterno,cp,colonia,calle,num_ext,num_int,subdelegacion` (ver `docs/csv-schema.md`). |
 | `data/config.json` | `{"mail_to": "<correo destino>"}` |
 | `.env` (raíz) | `ANTICAPTCHA_KEY=<clave>` y opcional `ANTICAPTCHA_DAILY_CAP_USD` (0.50 por defecto). Se copia a `files/.env` con `chmod 600`. |
 
 ## Uso
 
 1. Abre la app: carga el Paso 1 del sitio.
-2. **Llenar ▾ → Paso 1**: llena CURP, correo y confirmación y verifica cada valor releyéndolo.
+2. **Llenar ▾ → Paso 1**: llena CURP, correo y confirmación, resuelve el captcha y verifica cada valor releyéndolo.
+   **Llenar ▾ → Paso 2. Persona empleadora**: teléfono, CP + «Buscar», colonia, calle, números, subdelegación y la casilla del manifiesto.
 3. El captcha se resuelve solo (Anti-Captcha: ~5 s y ~0.0006 USD en la prueba); una persona lo revisa y pulsa **Continuar**.
    `captcha_balance` por adb valida la clave.
 4. En el Paso 5: **Llenar ▾ → Paso 5. Líneas de pago ▸ → Enviar por correo / Enviar por WhatsApp**.

@@ -95,4 +95,85 @@ try{
 }catch(e){ send({type:'CAPTCHA_IMG',ok:false,reason:'canvas_no_legible',message:String(e&&e.message||e)}); }
 """)
     }
+
+    private const val NT = """
+function nt(s){ return (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[*:]/g,'').replace(/\s+/g,' ').trim().toLowerCase(); }
+// Control por TEXTO de etiqueta (igual o que empiece por el texto, para etiquetas largas); el id es respaldo.
+function findCtl(labels, domId, sel){
+  var wanted=labels.map(nt), ls=document.querySelectorAll('label');
+  for(var i=0;i<ls.length;i++){ var t=nt(ls[i].textContent);
+    if(!wanted.some(function(w){ return t===w || t.indexOf(w)===0; })) continue;
+    var el=ls[i].htmlFor?document.getElementById(ls[i].htmlFor):ls[i].querySelector(sel);
+    if(el) return {el:el,via:'label'}; }
+  if(domId){ var d=document.getElementById(domId); if(d) return {el:d,via:'id'}; }
+  return null;
+}
+function ev(el,t){ el.dispatchEvent(new Event(t,{bubbles:true})); }
+"""
+
+    /** Lista nativa <select>: elige por TEXTO de opción (sin acentos/mayúsculas; exacta o única que contenga), esperando a que carguen las opciones. */
+    fun selectNative(key: String, labels: List<String>, domId: String, optionText: String, waitMs: Int = 8000): String {
+        val l = labels.joinToString(prefix = "[", postfix = "]") { JSONObject.quote(it) }
+        return wrap("""$NT
+var f=findCtl($l, ${JSONObject.quote(domId)}, 'select');
+if(!f||f.el.tagName!=='SELECT'){ send({type:'FILL_RESULT',field:${JSONObject.quote(key)},ok:false,reason:'etiqueta_no_encontrada',message:'select no encontrado'}); return; }
+var sel=f.el, want=nt(${JSONObject.quote(optionText)}), t0=Date.now();
+while(sel.options.length<=1 && Date.now()-t0<$waitMs){ await sleep(250); }
+var opts=[].slice.call(sel.options).filter(function(o){ return o.value!==''; });
+var m=opts.filter(function(o){ return nt(o.text)===want; });
+if(m.length===0) m=opts.filter(function(o){ return nt(o.text).indexOf(want)!==-1; });
+if(m.length!==1){ send({type:'FILL_RESULT',field:${JSONObject.quote(key)},ok:false,reason:m.length===0?'opcion_no_encontrada':'opcion_ambigua',
+  message:(m.length===0?'opcion_no_encontrada':'opcion_ambigua')+' opciones='+opts.length+' muestra='+JSON.stringify(opts.slice(0,15).map(function(o){return o.text.trim();}))}); return; }
+sel.scrollIntoView({block:'center'}); await sleep(200);
+sel.value=m[0].value; ev(sel,'input'); ev(sel,'change'); await sleep(400);
+var cur=sel.options[sel.selectedIndex], ok=!!cur&&cur.value===m[0].value;
+send({type:'FILL_RESULT',field:${JSONObject.quote(key)},ok:ok,reason:ok?'':'valor_no_aplicado',via:f.via,message:ok?('opcion aplicada indice='+sel.selectedIndex+' de '+sel.options.length+' via='+f.via):'valor_no_aplicado'});
+""")
+    }
+
+    /** Casilla: solo hace clic si el estado difiere (literal booleano desde Kotlin, L4) y verifica .checked. */
+    fun setCheckbox(key: String, labels: List<String>, domId: String, want: Boolean): String {
+        val l = labels.joinToString(prefix = "[", postfix = "]") { JSONObject.quote(it) }
+        return wrap("""$NT
+var f=findCtl($l, ${JSONObject.quote(domId)}, 'input[type=checkbox]');
+if(!f){ send({type:'FILL_RESULT',field:${JSONObject.quote(key)},ok:false,reason:'etiqueta_no_encontrada',message:'casilla no encontrada'}); return; }
+var el=f.el, want=$want;
+if(el.checked!==want){ el.scrollIntoView({block:'center'}); await sleep(250); el.click(); await sleep(400); }
+var ok=(el.checked===want);
+send({type:'FILL_RESULT',field:${JSONObject.quote(key)},ok:ok,reason:ok?'':'valor_no_aplicado',via:f.via,message:ok?('casilla='+el.checked+' via='+f.via):'valor_no_aplicado checked='+el.checked});
+""")
+    }
+
+    /** Botón por texto/valor (o id de respaldo). Es una acción de consulta (p. ej. «Buscar»); nunca se usa para avanzar de paso. */
+    fun clickButton(key: String, labels: List<String>, domId: String): String {
+        val l = labels.joinToString(prefix = "[", postfix = "]") { JSONObject.quote(it) }
+        return wrap("""$NT
+var wanted=$l.map(nt), el=null;
+var bs=document.querySelectorAll('button,input[type=button],input[type=submit]');
+for(var i=0;i<bs.length;i++){ if(wanted.indexOf(nt(bs[i].innerText||bs[i].value||''))!==-1){ el=bs[i]; break; } }
+var via='texto'; if(!el&&${JSONObject.quote(domId)}){ el=document.getElementById(${JSONObject.quote(domId)}); via='id'; }
+if(!el){ send({type:'FILL_RESULT',field:${JSONObject.quote(key)},ok:false,reason:'etiqueta_no_encontrada',message:'boton no encontrado'}); return; }
+if(el.disabled){ send({type:'FILL_RESULT',field:${JSONObject.quote(key)},ok:false,reason:'boton_deshabilitado',message:'boton deshabilitado'}); return; }
+el.scrollIntoView({block:'center'}); await sleep(200); el.click(); await sleep(600);
+send({type:'FILL_RESULT',field:${JSONObject.quote(key)},ok:true,via:via,message:'clic en boton via='+via});
+""")
+    }
+
+    /** Campo de solo lectura que otro paso rellena (p. ej. Estado tras «Buscar»): espera a que tenga valor. Solo informa la longitud. */
+    fun readonlyFilled(key: String, labels: List<String>, domId: String, waitMs: Int = 8000): String {
+        val l = labels.joinToString(prefix = "[", postfix = "]") { JSONObject.quote(it) }
+        return wrap("""$NT
+var f=findCtl($l, ${JSONObject.quote(domId)}, 'input'); 
+if(!f){ send({type:'FILL_RESULT',field:${JSONObject.quote(key)},ok:false,reason:'etiqueta_no_encontrada',message:'campo no encontrado'}); return; }
+var t0=Date.now(); while((f.el.value||'').length===0 && Date.now()-t0<$waitMs){ await sleep(250); }
+var n=(f.el.value||'').length;
+send({type:'FILL_RESULT',field:${JSONObject.quote(key)},ok:n>0,reason:n>0?'':'valor_no_aplicado',message:n>0?('relleno por el sitio len='+n):'el sitio no lo relleno'});
+""")
+    }
+
+    /** Solo informa si el botón de avance está habilitado. NO lo pulsa. */
+    fun buttonState(key: String, domId: String): String = wrap("""
+var el=document.getElementById(${JSONObject.quote(domId)});
+send({type:'FILL_RESULT',field:${JSONObject.quote(key)},ok:!!el,message:el?('habilitado='+!el.disabled):'boton no encontrado'});
+""")
 }

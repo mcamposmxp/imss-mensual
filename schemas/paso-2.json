@@ -1,0 +1,201 @@
+{
+  "screen_id": "paso-2",
+  "title": "Paso 2. Persona empleadora",
+  "status": "VERIFICADO en el dispositivo (v0.10.0, 2026-10-11): llenado completo; Continuar queda habilitado y lo pulsa el humano",
+  "url_pattern": "^https://adodigital\\.imss\\.gob\\.mx/pth/",
+  "ready": {
+    "text_regex": "",
+    "needs": [
+      "#telCel",
+      "#cp",
+      "#colonias",
+      "#checkDatos"
+    ]
+  },
+  "evidence": "docs/qa/2026-10-11-probe-paso2-{GENERAL,FIELDS,BUTTONS,DIALOGS}.json (app v0.9.0)",
+  "readonly_blocks": [
+    "Información de RENAPO de la persona empleadora",
+    "Datos del documento probatorio"
+  ],
+  "fields": [
+    {
+      "key": "tel_celular",
+      "labels": [
+        "Teléfono celular*:"
+      ],
+      "kind": "text",
+      "required": true,
+      "order": 1,
+      "dom": {
+        "id": "telCel",
+        "maxlength": 10
+      }
+    },
+    {
+      "key": "correo_alterno",
+      "labels": [
+        "Correo electrónico alternativo:"
+      ],
+      "kind": "text",
+      "required": false,
+      "order": 2,
+      "dom": {
+        "id": "correoAlternativo",
+        "maxlength": 200
+      }
+    },
+    {
+      "key": "cp",
+      "labels": [
+        "Código postal*:"
+      ],
+      "kind": "text_lookup",
+      "required": true,
+      "order": 3,
+      "dom": {
+        "id": "cp",
+        "maxlength": 5
+      },
+      "lookup": {
+        "button_labels": [
+          "Buscar"
+        ],
+        "dom": "buscarCP",
+        "fills": [
+          "estado",
+          "municipio",
+          "colonia"
+        ],
+        "wait_for": "colonias con opciones"
+      }
+    },
+    {
+      "key": "estado",
+      "labels": [
+        "Estado:"
+      ],
+      "kind": "readonly",
+      "order": 4,
+      "dom": {
+        "id": "estado"
+      },
+      "note": "se llena con Buscar; solo se verifica"
+    },
+    {
+      "key": "municipio",
+      "labels": [
+        "Municipio o Alcaldía:"
+      ],
+      "kind": "readonly",
+      "order": 5,
+      "dom": {
+        "id": "municipio"
+      }
+    },
+    {
+      "key": "colonia",
+      "labels": [
+        "Selecciona tu colonia*:"
+      ],
+      "kind": "select_native",
+      "required": true,
+      "order": 6,
+      "depends_on": "cp",
+      "dom": {
+        "id": "colonias",
+        "name": "cveColonia"
+      },
+      "note": "opciones solo tras Buscar"
+    },
+    {
+      "key": "calle",
+      "labels": [
+        "Calle*:"
+      ],
+      "kind": "text",
+      "required": true,
+      "order": 7,
+      "dom": {
+        "id": "calle",
+        "maxlength": 50
+      }
+    },
+    {
+      "key": "num_ext",
+      "labels": [
+        "Número exterior*:"
+      ],
+      "kind": "text",
+      "required": true,
+      "order": 8,
+      "dom": {
+        "id": "numExt",
+        "maxlength": 10
+      }
+    },
+    {
+      "key": "num_int",
+      "labels": [
+        "Número interior:"
+      ],
+      "kind": "text",
+      "required": false,
+      "order": 9,
+      "dom": {
+        "id": "numInt",
+        "maxlength": 10
+      }
+    },
+    {
+      "key": "subdelegacion",
+      "labels": [
+        "Subdelegación*:"
+      ],
+      "kind": "select_native",
+      "required": true,
+      "order": 10,
+      "depends_on": "colonia",
+      "dom": {
+        "id": "subdelegaciones"
+      },
+      "note": "hoy solo '--Selecciona por favor--'; se espera que cargue tras elegir colonia (por verificar)"
+    },
+    {
+      "key": "manifiesto",
+      "labels": [
+        "Manifiesto bajo protesta de decir verdad"
+      ],
+      "kind": "checkbox",
+      "required": true,
+      "order": 11,
+      "dom": {
+        "id": "checkDatos"
+      },
+      "note": "declaración legal; el usuario decidió que la automatización la marque (2026-10-11)"
+    }
+  ],
+  "actions": [
+    {
+      "key": "continuar",
+      "labels": [
+        "Continuar"
+      ],
+      "kind": "button",
+      "dom": {
+        "id": "continuaCotiza"
+      },
+      "note": "La app NUNCA lo pulsa en este paso: solo informa si está habilitado."
+    },
+    {
+      "key": "cancelar",
+      "labels": [
+        "Cancelar"
+      ],
+      "kind": "button",
+      "dom": {
+        "id": "cancelar"
+      },
+      "note": "NUNCA pulsar"
+    }
+  ]
+}

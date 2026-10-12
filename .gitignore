@@ -18,3 +18,5 @@ data/
 docs/qa/*-LINKS.json
 docs/qa/*-CELLS.json
 data/config.json
+docs/qa/*-TEXT.json
+docs/qa/*-CHOICES.json
