@@ -1,5 +1,7 @@
 # Guía reutilizable: automatizar formularios web en un WebView de Android
 
+> ⚠️ **Reemplazada por la [v2](guia-reutilizable-v2-sistema-multipaso-que-aprende.md)** (2026-10-12): trámites multipaso, datos cifrados, ciclo de aprendizaje con evidencia, sesión que caduca, captcha opcional y descarga de PDF. Esta v1 se conserva como historial; en un proyecto nuevo, empieza por la v2.
+
 > **Propósito.** Kit de arranque para un proyecto nuevo en el que una app Android nativa (Kotlin + Jetpack Compose) recibe una **URL inicial** y un **CSV**, descubre el formulario de la página con sondas DOM, lo llena con los datos del CSV, sigue los pasos y URLs siguientes (flujos multipaso) y se detiene ante la acción final irreversible para pedir confirmación humana. Incluye además toda la experiencia de **automatización de pruebas** por adb.
 >
 > **Origen.** Destila la experiencia de un proyecto real (app Android v0.145, ciclo completo validado en Android 10, 14 y 16). El contenido es **genérico**: no depende de ningún sitio concreto. Los nombres de funciones citados (`FormFiller.runStep`, `TestHarness`, etc.) son del repositorio origen y sirven como referencia de diseño; los fragmentos del Anexo C están generalizados.

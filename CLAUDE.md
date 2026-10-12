@@ -1,6 +1,6 @@
 # CLAUDE.md — Guía para Claude
 
-Lee este archivo antes de trabajar. Guía base de diseño, reglas y lecciones: `docs/plan/guia-reutilizable-automatizacion-formularios-webview.md` (principios P1–P10 del capítulo 0, no negociables).
+Lee este archivo antes de trabajar. Guía base de diseño, reglas y lecciones: `docs/plan/guia-reutilizable-v2-sistema-multipaso-que-aprende.md` (principios P1–P16, no negociables; la v1 queda como historial).
 
 ## Proyecto y alcance
 App Android nativa (Kotlin + Jetpack Compose) en `android-app/` que, dada una URL inicial y un CSV, explora el formulario con sondas DOM, lo llena y sigue los pasos hasta el objetivo: llenar todos los pasos, seleccionar 21 días hábiles en el calendario y **detenerse antes de aceptar términos y obtener constancia y pago**. Sitio objetivo: `https://adodigital.imss.gob.mx/pth/editarTrabajador.do` (IMSS).

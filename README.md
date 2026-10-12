@@ -24,8 +24,9 @@ descarga el **Comprobante** y la **Línea de captura** y los envía por **correo
 - No se leen ni se guardan credenciales ni la sesión del navegador. CURP y correo se enmascaran
   en el log.
 
-La guía completa de diseño y lecciones está en
-[docs/plan/guia-reutilizable-automatizacion-formularios-webview.md](docs/plan/guia-reutilizable-automatizacion-formularios-webview.md);
+La guía completa de diseño y lecciones (v2, vigente) está en
+[docs/plan/guia-reutilizable-v2-sistema-multipaso-que-aprende.md](docs/plan/guia-reutilizable-v2-sistema-multipaso-que-aprende.md)
+(la [v1](docs/plan/guia-reutilizable-automatizacion-formularios-webview.md) queda como historial);
 las reglas de trabajo, en [CLAUDE.md](CLAUDE.md).
 
 ## Requisitos

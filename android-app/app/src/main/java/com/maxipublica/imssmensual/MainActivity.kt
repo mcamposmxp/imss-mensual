@@ -37,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -363,44 +364,61 @@ class MainActivity : ComponentActivity() {
                     horizontalArrangement = Arrangement.spacedBy(2.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    TextButton(onClick = { webView?.loadUrl(START_URL) }) { Text("Abrir", fontSize = 12.sp) }
-                    TextButton(onClick = { webView?.reload() }) { Text("Recargar", fontSize = 12.sp) }
-                    TextButton(onClick = {
-                        desktopUa = !desktopUa
-                        prefs.edit().putBoolean(PREF_DESKTOP_UA, desktopUa).apply()
-                        webView?.let { configureWebView(it, desktopUa); it.reload() }
-                        AppLog.log("UA desktop=$desktopUa")
-                    }) { Text(if (desktopUa) "UA: PC" else "UA: móvil", fontSize = 12.sp) }
-                    TextButton(onClick = { showData = true }) { Text("Datos", fontSize = 12.sp, maxLines = 1, softWrap = false) }
-                    var fillMenu by remember { mutableStateOf(false) }
-                    Box {
-                        TextButton(onClick = { fillMenu = true }) { Text("Llenar ▾", fontSize = 12.sp, maxLines = 1, softWrap = false) }
-                        androidx.compose.material3.DropdownMenu(expanded = fillMenu, onDismissRequest = { fillMenu = false }) {
-                            fillSteps().forEach { (id, title) ->
-                                androidx.compose.material3.DropdownMenuItem(text = { Text(title) }, onClick = { fillMenu = false; fillStep(id) })
+                    // Barra adaptativa: los botones más usados pasan a la izquierda (contadores guardados en el teléfono).
+                    // Orden de partida, mientras no haya historial: Datos, Llenar, Recargar, Abrir, Sondas, UA, Log.
+                    val defaultOrder = listOf("datos", "llenar", "recargar", "abrir", "sondas", "ua", "log")
+                    val usage = remember { mutableStateMapOf<String, Int>().apply { defaultOrder.forEach { put(it, prefs.getInt("uso_$it", 0)) } } }
+                    fun bump(k: String) { val n = (usage[k] ?: 0) + 1; usage[k] = n; prefs.edit().putInt("uso_$k", n).apply() }
+                    val items: Map<String, @Composable () -> Unit> = mapOf(
+                        "datos" to { TextButton(onClick = { bump("datos"); showData = true }) { Text("Datos", fontSize = 12.sp, maxLines = 1, softWrap = false) } },
+                        "llenar" to {
+                            var fillMenu by remember { mutableStateOf(false) }
+                            Box {
+                                TextButton(onClick = { bump("llenar"); fillMenu = true }) { Text("Llenar ▾", fontSize = 12.sp, maxLines = 1, softWrap = false) }
+                                androidx.compose.material3.DropdownMenu(expanded = fillMenu, onDismissRequest = { fillMenu = false }) {
+                                    fillSteps().forEach { (id, title) ->
+                                        androidx.compose.material3.DropdownMenuItem(text = { Text(title) }, onClick = { fillMenu = false; fillStep(id) })
+                                    }
+                                    var paso5 by remember { mutableStateOf(false) }
+                                    androidx.compose.material3.DropdownMenuItem(
+                                        text = { Text("Paso 5. Líneas de pago " + if (paso5) "▾" else "▸") },
+                                        onClick = { paso5 = !paso5 })
+                                    if (paso5) {
+                                        androidx.compose.material3.DropdownMenuItem(text = { Text("      Enviar por correo") },
+                                            onClick = { fillMenu = false; paso5 = false; confirmDocs = "mail" })
+                                        androidx.compose.material3.DropdownMenuItem(text = { Text("      Enviar por WhatsApp") },
+                                            onClick = { fillMenu = false; paso5 = false; confirmDocs = "whatsapp" })
+                                    }
+                                }
                             }
-                            var paso5 by remember { mutableStateOf(false) }
-                            androidx.compose.material3.DropdownMenuItem(
-                                text = { Text("Paso 5. Líneas de pago " + if (paso5) "▾" else "▸") },
-                                onClick = { paso5 = !paso5 })
-                            if (paso5) {
-                                androidx.compose.material3.DropdownMenuItem(text = { Text("      Enviar por correo") },
-                                    onClick = { fillMenu = false; paso5 = false; confirmDocs = "mail" })
-                                androidx.compose.material3.DropdownMenuItem(text = { Text("      Enviar por WhatsApp") },
-                                    onClick = { fillMenu = false; paso5 = false; confirmDocs = "whatsapp" })
+                        },
+                        "recargar" to { TextButton(onClick = { bump("recargar"); webView?.reload() }) { Text("Recargar", fontSize = 12.sp, maxLines = 1, softWrap = false) } },
+                        "abrir" to { TextButton(onClick = { bump("abrir"); webView?.loadUrl(START_URL) }) { Text("Abrir", fontSize = 12.sp, maxLines = 1, softWrap = false) } },
+                        "sondas" to {
+                            var menu by remember { mutableStateOf(false) }
+                            Box {
+                                TextButton(onClick = { bump("sondas"); menu = true }) { Text("Sondas", fontSize = 12.sp, maxLines = 1, softWrap = false) }
+                                androidx.compose.material3.DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                                    ProbeScripts.ALL.keys.forEach { n ->
+                                        androidx.compose.material3.DropdownMenuItem(text = { Text(n) }, onClick = { menu = false; runProbe(n) })
+                                    }
+                                }
                             }
-                        }
-                    }
-                    var menu by remember { mutableStateOf(false) }
-                    Box {
-                        TextButton(onClick = { menu = true }) { Text("Sondas", fontSize = 12.sp) }
-                        androidx.compose.material3.DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                            ProbeScripts.ALL.keys.forEach { n ->
-                                androidx.compose.material3.DropdownMenuItem(text = { Text(n) }, onClick = { menu = false; runProbe(n) })
-                            }
-                        }
-                    }
-                    TextButton(onClick = { showLog = !showLog }) { Text("Log", fontSize = 12.sp, maxLines = 1, softWrap = false) }
+                        },
+                        "ua" to {
+                            TextButton(onClick = {
+                                bump("ua")
+                                desktopUa = !desktopUa
+                                prefs.edit().putBoolean(PREF_DESKTOP_UA, desktopUa).apply()
+                                webView?.let { configureWebView(it, desktopUa); it.reload() }
+                                AppLog.log("UA desktop=$desktopUa")
+                            }) { Text(if (desktopUa) "UA: PC" else "UA: móvil", fontSize = 12.sp, maxLines = 1, softWrap = false) }
+                        },
+                        "log" to { TextButton(onClick = { bump("log"); showLog = !showLog }) { Text("Log", fontSize = 12.sp, maxLines = 1, softWrap = false) } },
+                    )
+                    // más usados primero; a igualdad, el orden de partida. key(k) conserva el estado de cada menú al reordenar.
+                    defaultOrder.sortedWith(compareByDescending<String> { usage[it] ?: 0 }.thenBy { defaultOrder.indexOf(it) })
+                        .forEach { k -> androidx.compose.runtime.key(k) { items.getValue(k)() } }
                 }
                 Text(
                     versionLabel,

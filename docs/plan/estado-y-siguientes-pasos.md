@@ -80,7 +80,7 @@ App Android nativa (Kotlin + Compose + WebView) que llena el trámite «Incorpor
 
 ## 7. Mapa de documentos
 
-`README.md` (uso) · `CLAUDE.md` (reglas y decisiones) · `docs/plan/flujo-completo-pth.md` (mapa del flujo y hallazgos) · `docs/csv-schema.md` (columnas por paso) · `schemas/` y `mappings/` (pasos 1–4) · `docs/plan/guia-reutilizable-automatizacion-formularios-webview.md` (guía de diseño) · `memory.md` (lecciones operativas).
+`README.md` (uso) · `CLAUDE.md` (reglas y decisiones) · `docs/plan/flujo-completo-pth.md` (mapa del flujo y hallazgos) · `docs/csv-schema.md` (columnas por paso) · `schemas/` y `mappings/` (pasos 1–4) · `docs/plan/guia-reutilizable-v2-sistema-multipaso-que-aprende.md` (**guía v2**, vigente) · `docs/plan/prompt-inicial-nuevo-proyecto-v2.md` (**instrucciones iniciales** para arrancar un proyecto nuevo con la guía) y `docs/plan/guia-reutilizable-automatizacion-formularios-webview.md` (v1, historial) · `memory.md` (lecciones operativas).
 
 ## 8. Historial resumido
 
