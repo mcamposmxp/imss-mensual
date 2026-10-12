@@ -5,11 +5,12 @@ App Android nativa (Kotlin + Jetpack Compose + WebView) que automatiza el llenad
 (`https://adodigital.imss.gob.mx/pth/editarTrabajador.do`) a partir de un CSV, y que al final
 descarga el **Comprobante** y la **Línea de captura** y los envía por **correo** o **WhatsApp**.
 
-> Estado: en desarrollo (v0.10.0). Probado en un Xiaomi 2412DPC0AG con Android 16.
-> Lo implementado y verificado: Pasos 1 y 2 (con captcha resuelto por servicio), captura de los PDF del
-> Paso 5 y envío por correo y WhatsApp. **Pasos 3 y 4 y el calendario de 21 días hábiles
-> aún no están hechos.** Detalle y evidencia en
-> [docs/plan/estado-y-siguientes-pasos.md](docs/plan/estado-y-siguientes-pasos.md).
+> Estado: en desarrollo (v0.13.0). Probado en un Xiaomi 2412DPC0AG con Android 16.
+> **Verificado en el dispositivo:** pantalla de datos cifrada, Pasos 1, 2 y 3 (incluido el calendario de 21 días
+> hábiles), captcha resuelto por servicio, y la descarga de los PDF del Paso 5 con envío por correo y WhatsApp.
+> **Sin verificar:** el marcado de los términos y condiciones (v0.13.0). **Pendiente:** selección automática del
+> renglón del período, pulsar «Limpiar» solo, QA formal y versión release.
+> Estado detallado, hallazgos y pendientes: [docs/plan/estado-y-siguientes-pasos.md](docs/plan/estado-y-siguientes-pasos.md).
 
 ## Principios
 
@@ -56,24 +57,27 @@ La carpeta `data/` no se versiona. Para usar la app se necesitan, copiados al te
 
 | Archivo | Contenido |
 |---|---|
-| `data/input.csv` | Una fila por trámite; columnas de todos los pasos: `curp,correo,tel_celular,correo_alterno,cp,colonia,calle,num_ext,num_int,subdelegacion` (ver `docs/csv-schema.md`). |
+| `data/import.csv` | Opcional, para cargar datos de prueba por adb (`import_csv`). Hoy los datos se capturan en la pantalla **Datos** de la app y se guardan cifrados. |
 | `data/config.json` | `{"mail_to": "<correo destino>"}` |
 | `.env` (raíz) | `ANTICAPTCHA_KEY=<clave>` y opcional `ANTICAPTCHA_DAILY_CAP_USD` (0.50 por defecto). Se copia a `files/.env` con `chmod 600`. |
 
 ## Uso
 
-1. Abre la app: carga el Paso 1 del sitio.
-2. **Llenar ▾ → Paso 1**: llena CURP, correo y confirmación, resuelve el captcha y verifica cada valor releyéndolo.
-   **Llenar ▾ → Paso 2. Persona empleadora**: teléfono, CP + «Buscar», colonia, calle, números, subdelegación y la casilla del manifiesto.
-3. El captcha se resuelve solo (Anti-Captcha: ~5 s y ~0.0006 USD en la prueba); una persona lo revisa y pulsa **Continuar**.
-   `captcha_balance` por adb valida la clave.
-4. En el Paso 5: **Llenar ▾ → Paso 5. Líneas de pago ▸ → Enviar por correo / Enviar por WhatsApp**.
-   La app captura los dos PDF (todo o nada) y abre el correo o WhatsApp con los adjuntos; la
-   persona elige contacto, revisa y pulsa Enviar.
-5. El menú **Sondas** vuelca la estructura del DOM de la pantalla actual (solo lectura).
+1. Al abrir la app aparece **Datos**: cada patrón es una caja con sus empleados. Agrega o edita (los datos se guardan
+   cifrados en el teléfono), elige un empleado (eso fija el par Patrón → Empleado) y toca **Continuar**.
+2. **Llenar ▾ → Paso 1**: CURP, correo y confirmación, y resuelve el captcha. Una persona revisa y pulsa **Continuar**.
+3. **Paso 2** (empleador, domicilio, manifiesto) y **Paso 3** (empleado, domicilio, cotización y calendario de 21 días
+   hábiles): cada uno se llena con el menú y una persona pulsa **Continuar**. El período de cobertura se selecciona a mano.
+4. **Paso 4. Términos y condiciones**: marca «He leído y acepto», pulsa el «Aceptar» de la ventana y se **detiene con
+   «Continuar» habilitado**. Pulsarlo (y la confirmación final) lo hace una persona: genera el documento.
+5. **Paso 5. Líneas de pago ▸ Enviar por correo / WhatsApp**: descarga los dos PDF (todo o nada) y abre la app elegida
+   con los adjuntos; la persona pulsa Enviar.
+6. **Sondas** vuelca la estructura del DOM de la pantalla actual (solo lectura).
 
-También se puede disparar por adb (solo en debug):
-`adb shell "am broadcast -a com.maxipublica.imssmensual.TEST --es cmd <fill|probe|docs|click|goto|captcha_balance> --es name <valor>"`.
+> **La sesión del sitio caduca por inactividad (entre ~2,5 y ~9 min).** El recorrido hasta los términos debe hacerse
+> sin pausas largas.
+
+Por adb (solo debug): `adb shell "am broadcast -a com.maxipublica.imssmensual.TEST --es cmd <fill|probe|docs|click|goto|import_csv|par_list|par_set|captcha_balance> --es name <valor>"`.
 Los argumentos con espacios o acentos van entre comillas **dentro** del comando remoto.
 
 ## Estructura
@@ -81,7 +85,7 @@ Los argumentos con espacios o acentos van entre comillas **dentro** del comando 
 | Ruta | Contenido |
 |---|---|
 | `android-app/` | Proyecto Gradle (paquete `com.maxipublica.imssmensual`). |
-| `schemas/`, `mappings/` | Esquema de campos y mapeo CSV→campo por pantalla (se empaquetan como assets). |
+| `schemas/`, `mappings/` | Esquema de campos y mapeo dato→campo por pantalla, pasos 1 a 4 (se empaquetan como assets; cada `paso-N.json` aparece en el menú Llenar). |
 | `docs/plan/` | Guía de diseño y estado del proyecto. |
 | `docs/qa/` | Evidencia de sondas y logs (sin datos personales). |
 | `docs/csv-schema.md` | Esquema del CSV, construido con los hallazgos de las sondas. |

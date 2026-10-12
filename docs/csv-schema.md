@@ -25,3 +25,12 @@ Los datos de RENAPO se muestran solo para verificación: no se llenan.
 | num_int | Número interior | texto ≤ 10 | no | | vacío = no tocar |
 | subdelegacion | Subdelegación | lista nativa | sí | texto exacto de la opción | sus opciones cargan al elegir la colonia (verificado) |
 | (ninguna) | Manifiesto bajo protesta | casilla | sí | NO es CSV | decisión del usuario (2026-10-11): la marca la automatización y el log lo registra |
+
+## Paso 3 · Persona trabajadora (aprobado y VERIFICADO el 2026-10-12, v0.12.4)
+Columnas del empleado (pantalla **Datos**): `curp_trab, nss, correo_trab, cp_trab, colonia_trab, calle_trab, num_ext_trab, num_int_trab, mes (actual|siguiente), tipo_pago (dia|mes), salario_diario, dias`.
+`mes_nombre` se calcula en la app (nombre del mes en español). Los datos de RENAPO se rellenan solos tras «Consultar».
+`dias` solo aplica con `tipo_pago=dia`: marca los primeros N días hábiles (lun–vie) del mes elegido (mínimo 21); verifica con el contador `#diasTrabajados`.
+Colonia y subdelegación: texto exacto de la lista del sitio para ese CP.
+
+## Paso 4 · Términos y condiciones (receta implementada v0.13.0, SIN verificar)
+Sin columnas de datos. La automatización marca `#checkTerminos`, pulsa `#aceptaTerminos` y se detiene con «Continuar» habilitado (decisión del usuario, 2026-10-12).

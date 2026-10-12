@@ -1,0 +1,298 @@
+{
+  "screen_id": "paso-3",
+  "title": "Paso 3. Persona trabajadora",
+  "status": "Sondeado en el dispositivo (2026-10-11/12); recetas implementadas en v0.12.0, pendiente de verificar el llenado",
+  "url_pattern": "^https://adodigital\\.imss\\.gob\\.mx/pth/",
+  "ready": {
+    "text_regex": "",
+    "needs": [
+      "#nss",
+      "#curpTrab",
+      "#mesIncorporacion",
+      "#diasTrabajados"
+    ]
+  },
+  "evidence": "docs/qa/2026-10-1{1,2}-probe-paso3*-{GENERAL,FIELDS,BUTTONS}.json",
+  "fields": [
+    {
+      "key": "curp_trab",
+      "labels": [
+        "CURP*:"
+      ],
+      "kind": "text",
+      "required": true,
+      "order": 1,
+      "dom": {
+        "id": "curpTrab",
+        "maxlength": 18
+      }
+    },
+    {
+      "key": "nss",
+      "labels": [
+        "NSS*:"
+      ],
+      "kind": "text_lookup",
+      "required": true,
+      "order": 2,
+      "dom": {
+        "id": "nss",
+        "maxlength": 11
+      },
+      "lookup": {
+        "button_labels": [
+          "Consultar"
+        ],
+        "dom": "consultar",
+        "fills": [
+          "nombre",
+          "aPaterno"
+        ],
+        "note": "consulta AJAX: rellena nombre, apellidos, sexo, nacimiento (solo lectura)"
+      }
+    },
+    {
+      "key": "nombre",
+      "labels": [
+        "Nombre(s)*:"
+      ],
+      "kind": "readonly",
+      "required": true,
+      "order": 3,
+      "dom": {
+        "id": "nombreTrab"
+      }
+    },
+    {
+      "key": "a_paterno",
+      "labels": [
+        "Primer apellido*:"
+      ],
+      "kind": "readonly",
+      "required": true,
+      "order": 4,
+      "dom": {
+        "id": "aPaternoTrab"
+      }
+    },
+    {
+      "key": "correo_trab",
+      "labels": [
+        "Correo electrónico:"
+      ],
+      "kind": "text",
+      "required": false,
+      "order": 5,
+      "dom": {
+        "id": "correoAseg",
+        "maxlength": 200
+      }
+    },
+    {
+      "key": "cp_trab",
+      "labels": [
+        "Código postal*:"
+      ],
+      "kind": "text_lookup",
+      "required": true,
+      "order": 6,
+      "dom": {
+        "id": "cp",
+        "maxlength": 5
+      },
+      "lookup": {
+        "button_labels": [
+          "Buscar"
+        ],
+        "dom": "buscarCP",
+        "fills": [
+          "estado",
+          "municipio",
+          "colonia"
+        ]
+      }
+    },
+    {
+      "key": "estado",
+      "labels": [
+        "Estado:"
+      ],
+      "kind": "readonly",
+      "required": true,
+      "order": 7,
+      "dom": {
+        "id": "estado"
+      }
+    },
+    {
+      "key": "municipio",
+      "labels": [
+        "Municipio o Alcaldía:"
+      ],
+      "kind": "readonly",
+      "required": true,
+      "order": 8,
+      "dom": {
+        "id": "municipio"
+      }
+    },
+    {
+      "key": "colonia_trab",
+      "labels": [
+        "Selecciona tu colonia*:"
+      ],
+      "kind": "select_native",
+      "required": true,
+      "order": 9,
+      "dom": {
+        "id": "colonias"
+      }
+    },
+    {
+      "key": "calle_trab",
+      "labels": [
+        "Calle*:"
+      ],
+      "kind": "text",
+      "required": true,
+      "order": 10,
+      "dom": {
+        "id": "calle",
+        "maxlength": 50
+      }
+    },
+    {
+      "key": "num_ext_trab",
+      "labels": [
+        "Número exterior*:"
+      ],
+      "kind": "text",
+      "required": true,
+      "order": 11,
+      "dom": {
+        "id": "numExt",
+        "maxlength": 10
+      }
+    },
+    {
+      "key": "num_int_trab",
+      "labels": [
+        "Número interior:"
+      ],
+      "kind": "text",
+      "required": false,
+      "order": 12,
+      "dom": {
+        "id": "numInt",
+        "maxlength": 10
+      }
+    },
+    {
+      "key": "mes",
+      "labels": [
+        "Mes de incorporación*:"
+      ],
+      "kind": "select_native",
+      "required": true,
+      "order": 13,
+      "dom": {
+        "id": "mesIncorporacion"
+      },
+      "note": "las opciones cambian con la fecha (meses vigentes)"
+    },
+    {
+      "key": "tipo_pago",
+      "labels": [
+        "Pago por día",
+        "Pago mes completo"
+      ],
+      "kind": "radio",
+      "required": true,
+      "order": 14,
+      "dom": {
+        "name": "opcPago"
+      },
+      "options": {
+        "dia": {
+          "id": "porDia",
+          "labels": [
+            "Pago por día"
+          ]
+        },
+        "mes": {
+          "id": "porMes",
+          "labels": [
+            "Pago mes completo"
+          ]
+        }
+      },
+      "note": "deshabilitados hasta Consultar"
+    },
+    {
+      "key": "salario_diario",
+      "labels": [
+        "Salario diario*:"
+      ],
+      "kind": "text",
+      "required": true,
+      "order": 15,
+      "dom": {
+        "id": "salarioDiario",
+        "maxlength": 15
+      },
+      "note": "≥ salario mínimo indicado en pantalla"
+    },
+    {
+      "key": "dias",
+      "labels": [
+        "Seleccione los días de trabajo de la persona trabajadora del hogar *:"
+      ],
+      "kind": "calendar_days",
+      "required": true,
+      "order": 16,
+      "only_if": {
+        "tipo_pago": "dia"
+      },
+      "dom": {
+        "id": "diasTrabajados"
+      },
+      "calendar": {
+        "component": "jQuery UI datepicker",
+        "day": "td[data-handler=selectDay] a",
+        "rule": "primeros N días hábiles (lun–vie) del mes elegido",
+        "oracle": "#diasTrabajados == N"
+      },
+      "note": "el calendario sigue al mes elegido; NO tocar «Deseo renovar el trámite» (radioRenovacion)"
+    }
+  ],
+  "actions": [
+    {
+      "key": "continuar",
+      "labels": [
+        "Continuar"
+      ],
+      "kind": "button",
+      "dom": {
+        "id": "continua"
+      },
+      "note": "NUNCA lo pulsa la app"
+    },
+    {
+      "key": "regresar",
+      "labels": [
+        "Regresar"
+      ],
+      "kind": "button",
+      "dom": {
+        "id": "regresar"
+      },
+      "note": "NUNCA pulsar"
+    }
+  ],
+  "never_touch": [
+    "radioRenovacion",
+    "desmarcarDias",
+    "aceptaRenovacionMes",
+    "aceptaRenovacionDias"
+  ]
+}

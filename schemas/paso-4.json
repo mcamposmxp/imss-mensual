@@ -1,0 +1,65 @@
+{
+  "screen_id": "paso-4",
+  "title": "Paso 4. Términos y condiciones",
+  "status": "Sondeado el 2026-10-12; receta implementada en v0.13.0, pendiente de verificar en el dispositivo",
+  "url_pattern": "^https://adodigital\\.imss\\.gob\\.mx/pth/",
+  "ready": {
+    "text_regex": "",
+    "needs": [
+      "#checkTerminos",
+      "#aceptaTerminos"
+    ]
+  },
+  "evidence": "docs/qa/2026-10-12-probe-terminos-*.json",
+  "precondition": "la casilla debe estar SIN marcar: al marcarla se abre la ventana de términos",
+  "fields": [
+    {
+      "key": "terminos_check",
+      "labels": [
+        "He leído y acepto los términos y condiciones"
+      ],
+      "kind": "checkbox",
+      "required": true,
+      "order": 1,
+      "dom": {
+        "id": "checkTerminos"
+      },
+      "note": "declaración legal; decisión explícita del usuario (2026-10-12): la marca la automatización"
+    },
+    {
+      "key": "terminos_aceptar",
+      "labels": [
+        "Aceptar"
+      ],
+      "kind": "modal_accept",
+      "required": true,
+      "order": 2,
+      "modal": "#myModal2",
+      "dom": {
+        "id": "aceptaTerminos"
+      },
+      "note": "se desplaza hasta el final de la ventana y pulsa «Aceptar» de los términos; decisión explícita del usuario (2026-10-12)"
+    }
+  ],
+  "actions": [
+    {
+      "key": "continuar",
+      "labels": [
+        "Continuar"
+      ],
+      "kind": "button",
+      "dom": {
+        "id": "continuar"
+      },
+      "note": "NUNCA lo pulsa la app: tras él se genera el documento. La app solo informa si quedó habilitado."
+    }
+  ],
+  "never_touch": [
+    "continuar",
+    "guarda",
+    "guardaTrabajador",
+    "cancelar",
+    "regresar",
+    "cancelaModal"
+  ]
+}

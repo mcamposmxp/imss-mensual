@@ -15,3 +15,9 @@
 - Si adb WiFi "no encuentra" el dispositivo tras un rato: `adb kill-server; adb connect <IP>:5555` (el servidor adb se cuelga).
 - Paso 2: `select` nativo por texto (sin acentos/mayúsculas), esperando a que carguen opciones (colonias tras «Buscar»; subdelegación tras elegir colonia). Los logs no deben incluir texto de colonia/calle (domicilio).
 - Desplegar: la app instalada ya es el código commiteado; reinstalar a mitad de un recorrido pierde la pantalla.
+- Sesión del sitio: caduca por inactividad (funciona a ~2,5 min, caduca ~9 min); al caducar cualquier POST devuelve el Paso 1. Recorrer los pasos sin pausas.
+- Colonia/subdelegación: texto exacto de la lista para ese CP; si falla, el log lista las opciones.
+- Tras «Buscar» el CP queda bloqueado: hace falta «Limpiar» (receta pendiente).
+- Pantalla de datos: diseño anidado (patrón → sus empleados); el usuario confirmó que es el correcto (se probó y revirtió un diseño de listas independientes).
+- Terminos (Paso 4): la app marca «He leído» y pulsa «Aceptar» de la ventana por decisión del usuario; NUNCA «Continuar» ni `#guarda` (`NEVER_CLICK` en FormFiller).
+- Captcha: pedir `minLength=5`; revisar a ojo antes de «Continuar».

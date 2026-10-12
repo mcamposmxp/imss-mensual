@@ -1,0 +1,48 @@
+{
+  "screen_id": "paso-3",
+  "approved": "2026-10-12 (el humano entregó los datos de prueba y pidió llenarlos)",
+  "map": {
+    "curp_trab": {
+      "csv": "curp_trab",
+      "transform": "upper"
+    },
+    "nss": {
+      "csv": "nss",
+      "transform": "digits"
+    },
+    "correo_trab": {
+      "csv": "correo_trab",
+      "transform": "lower"
+    },
+    "cp_trab": {
+      "csv": "cp_trab",
+      "transform": "digits"
+    },
+    "colonia_trab": {
+      "csv": "colonia_trab"
+    },
+    "calle_trab": {
+      "csv": "calle_trab"
+    },
+    "num_ext_trab": {
+      "csv": "num_ext_trab"
+    },
+    "num_int_trab": {
+      "csv": "num_int_trab"
+    },
+    "mes": {
+      "csv": "mes_nombre"
+    },
+    "tipo_pago": {
+      "csv": "tipo_pago"
+    },
+    "salario_diario": {
+      "csv": "salario_diario",
+      "transform": "decimal"
+    },
+    "dias": {
+      "csv": "dias",
+      "transform": "digits"
+    }
+  }
+}

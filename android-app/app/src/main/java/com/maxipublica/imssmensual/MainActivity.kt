@@ -57,6 +57,8 @@ class MainActivity : ComponentActivity() {
     private companion object { var activeProbeReceiver: Pair<MainActivity, android.content.BroadcastReceiver>? = null }
 
     private var webView: WebView? = null
+    private val dataModel by lazy { DataModel(filesDir) { AppLog.log(it) } }
+    private var showData by mutableStateOf(true)   // al abrir la app aparece el selector de datos
     private var fillActive = false   // candado: evita llenados simultáneos (se chequea en el hilo UI)
     private val formFiller = FormFiller(
         webView = { webView },
@@ -162,18 +164,18 @@ class MainActivity : ComponentActivity() {
     /** Llena el paso 1 con la fila 1 de files/input.csv. NO captura captcha ni pulsa Continuar. */
     fun fillStep(id: String) {
         if (fillActive) { AppLog.log("FILL ignorado: ya hay un llenado activo"); return }
-        val f = java.io.File(filesDir, "input.csv")
-        if (!f.exists()) { AppLog.log("FILL FALLO: no existe files/input.csv"); return }
-        val rows = CsvSource.parse(f.readText())
-        if (rows.isEmpty()) { AppLog.log("FILL FALLO: CSV sin filas"); return }
+        val row: Map<String, String>? = dataModel.activeRow() ?: if (BuildConfig.DEBUG) {
+            java.io.File(filesDir, "input.csv").takeIf { it.exists() }?.let { CsvSource.parse(it.readText()).firstOrNull() }
+        } else null
+        if (row == null) { AppLog.log("FILL FALLO: no hay un par Patrón → Empleado seleccionado"); showData = true; return }
         fillActive = true
         formFiller.captchaSolver = { f -> solveCaptchaField(f) }
         lifecycleScope.launch {
             try {
                 val schema = org.json.JSONObject(asset("$id.json"))
                 val mapping = org.json.JSONObject(asset("$id.map.json"))
-                AppLog.log("FILL inicio $id (filas CSV=${rows.size}, columnas=${rows[0].keys})")
-                formFiller.fill(schema, mapping, rows[0])
+                AppLog.log("FILL inicio $id (${dataModel.activeLabel() ?: "respaldo CSV de pruebas"})")
+                formFiller.fill(schema, mapping, row)
             } catch (e: Exception) {
                 AppLog.log("FILL EXCEPCION ${e.javaClass.simpleName}: ${e.message}")
             } finally { fillActive = false }
@@ -294,6 +296,23 @@ class MainActivity : ComponentActivity() {
                     when (val cmd = i.getStringExtra("cmd").orEmpty()) {
                         "probe" -> runProbe(i.getStringExtra("name").orEmpty())
                         "open" -> webView?.loadUrl(START_URL)
+                        "import_csv" -> {
+                            val f = java.io.File(filesDir, "import.csv")
+                            if (f.exists()) { dataModel.importCsv(f.readText()); f.delete() } else AppLog.log("DATOS: no existe files/import.csv")
+                        }
+                        "par_list" -> dataModel.data.let { d ->
+                            d.employers.forEach { e -> val ws = d.workers.filter { it.parentId == e.id }
+                                if (ws.isEmpty()) AppLog.log("PAR ${e.id.take(6)}: Patrón: ${e.alias} → (sin empleado)")
+                                else ws.forEach { w -> AppLog.log("PAR ${e.id.take(6)}/${w.id.take(6)}: Patrón: ${e.alias} → Empleado: ${w.alias}") } }
+                            d.workers.filter { w -> d.employers.none { it.id == w.parentId } }.forEach { AppLog.log("SIN PATRON ${it.id.take(6)}: ${it.alias}") }
+                        }
+                        "par_set" -> dataModel.data.let { d ->
+                            val key = i.getStringExtra("name").orEmpty()   // "<6 car. del patrón>/<6 car. del empleado>" o "<6 car. del patrón>"
+                            val e = d.employers.firstOrNull { it.id.startsWith(key.substringBefore("/")) }
+                            val w = d.workers.firstOrNull { it.parentId == e?.id && key.contains("/") && it.id.startsWith(key.substringAfter("/")) }
+                                ?: d.workers.firstOrNull { it.parentId == e?.id && !key.contains("/") }
+                            if (e == null) AppLog.log("par_set: no existe $key") else { dataModel.setActive(e.id, w?.id); showData = false; AppLog.log("PAR activo: ${dataModel.activeLabel()}") }
+                        }
                         "captcha_balance" -> lifecycleScope.launch { antiCaptcha.balance() }
                         "docs" -> downloadAndSendDocs(i.getStringExtra("name").orEmpty().ifEmpty { "mail" })
                         "click" -> lifecycleScope.launch {
@@ -337,6 +356,7 @@ class MainActivity : ComponentActivity() {
                     dismissButton = { TextButton(onClick = { confirmDocs = null }) { Text("Cancelar") } },
                 )
             }
+            Box(Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
                 Row(
                     Modifier.fillMaxWidth().horizontalScroll(androidx.compose.foundation.rememberScrollState()).padding(horizontal = 4.dp),
@@ -351,6 +371,7 @@ class MainActivity : ComponentActivity() {
                         webView?.let { configureWebView(it, desktopUa); it.reload() }
                         AppLog.log("UA desktop=$desktopUa")
                     }) { Text(if (desktopUa) "UA: PC" else "UA: móvil", fontSize = 12.sp) }
+                    TextButton(onClick = { showData = true }) { Text("Datos", fontSize = 12.sp, maxLines = 1, softWrap = false) }
                     var fillMenu by remember { mutableStateOf(false) }
                     Box {
                         TextButton(onClick = { fillMenu = true }) { Text("Llenar ▾", fontSize = 12.sp, maxLines = 1, softWrap = false) }
@@ -386,6 +407,8 @@ class MainActivity : ComponentActivity() {
                     fontSize = 11.sp,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
                 )
+                Text(dataModel.activeLabel() ?: "Sin par seleccionado (botón Datos)", fontSize = 11.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp))
                 AppLog.lines.lastOrNull()?.let {
                     Text(it.take(160), fontSize = 10.sp, color = androidx.compose.ui.graphics.Color(0xFF555555),
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp), maxLines = 2)
@@ -412,6 +435,8 @@ class MainActivity : ComponentActivity() {
                         },
                     )
                 }
+            }
+                if (showData) DataScreen(dataModel) { showData = false }
             }
         }
     }

@@ -1,0 +1,9 @@
+{
+  "screen_id": "paso-4",
+  "approved": "2026-10-12 (decisión explícita del usuario: marcar «He leído» y pulsar «Aceptar» de los términos; detenerse con «Continuar» habilitado)",
+  "map": {
+    "terminos_check": {
+      "const": true
+    }
+  }
+}

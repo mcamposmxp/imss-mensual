@@ -30,6 +30,7 @@ object CsvSource {
         "upper" -> value.trim().uppercase()
         "lower" -> value.trim().lowercase()
         "digits" -> value.filter { it.isDigit() }
+        "decimal" -> value.filter { it.isDigit() || it == '.' }
         else -> value.trim()
     }
 }

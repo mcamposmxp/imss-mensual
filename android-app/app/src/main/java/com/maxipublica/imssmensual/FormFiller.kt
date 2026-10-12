@@ -7,6 +7,9 @@ import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
 
 /** Orquesta el llenado paso a paso (cap. 4.1). Un script JS = un mensaje de respuesta. */
+/** Botones que la app nunca pulsa: avanzan el trámite o lo concretan (decisión del proyecto). */
+private val NEVER_CLICK = setOf("continuar", "continua", "continuaCotiza", "guarda", "guardaTrabajador", "cancelar", "regresar", "cancelaModal")
+
 class FormFiller(private val webView: () -> WebView?, private val log: (String) -> Unit, private val hideKeyboard: () -> Unit) {
     private var pending: CompletableDeferred<JSONObject>? = null
     private var ready: CompletableDeferred<Boolean>? = null
@@ -60,6 +63,11 @@ class FormFiller(private val webView: () -> WebView?, private val log: (String) 
         val map = mapping.getJSONObject("map")
         for (f in order) {
             val key = f.getString("key")
+            val cond = f.optJSONObject("only_if")   // campo condicional: solo aplica si otra columna tiene cierto valor
+            if (cond != null) {
+                val k = cond.keys().next()
+                if (row[k] != cond.getString(k)) { log("[$key] omitido: no aplica ($k=${row[k].orEmpty()})"); continue }
+            }
             if (f.optString("kind") == "captcha_human") { log("[$key] omitido: lo resuelve el humano"); continue }
             if (f.optString("kind") == "captcha_image") {
                 val solver = captchaSolver
@@ -68,8 +76,16 @@ class FormFiller(private val webView: () -> WebView?, private val log: (String) 
                 continue
             }
             val kind = f.optString("kind")
+            val domId0 = f.optJSONObject("dom")?.optString("id").orEmpty()
+            if (kind == "modal_accept" && domId0 in NEVER_CLICK) { log("[$screen] STOP boton_prohibido: $domId0"); return false }
             val labels = f.getJSONArray("labels").let { a -> (0 until a.length()).map { a.getString(it) } }
             val dom = f.optJSONObject("dom")?.optString("id").orEmpty()
+            if (kind == "modal_accept") {   // «Aceptar» de la ventana de términos (decisión explícita del usuario)
+                log("[$key] aceptando la ventana de términos (decisión del usuario)")
+                val r = runStep(key, FillScripts.acceptModal(key, f.optString("modal"), dom, "checkTerminos"), 40_000)
+                if (r?.optBoolean("ok") != true && f.optBoolean("required")) { log("[$screen] STOP campo_requerido_fallido: $key"); return false }
+                continue
+            }
             if (kind == "readonly") {   // lo rellena el sitio (p. ej. tras «Buscar»): solo se verifica
                 val r = runStep(key, FillScripts.readonlyFilled(key, labels, dom))
                 if (r?.optBoolean("ok") != true && f.optBoolean("required")) { log("[$screen] STOP campo_requerido_fallido: $key"); return false }
@@ -78,18 +94,29 @@ class FormFiller(private val webView: () -> WebView?, private val log: (String) 
             val m = map.optJSONObject(key) ?: run { log("[$key] sin mapeo, omitido"); null } ?: continue
             val value: String = if (m.has("const")) m.get("const").toString()
                 else CsvSource.transform(row[m.getString("csv")].orEmpty(), m.optString("transform").ifEmpty { null })
-            if (value.isEmpty()) { log("[$key] valor vacío en CSV: no se toca"); continue }   // vacío = no tocar (L23)
+            if (value.isEmpty()) {
+                // vacío = no tocar (L23), salvo que el campo sea obligatorio: el sitio puede dejar «Continuar» habilitado y validar solo al pulsar
+                if (f.optBoolean("required")) { log("[$screen] STOP campo_requerido_vacio: $key (faltan datos en el par seleccionado)"); return false }
+                log("[$key] valor vacío en los datos: no se toca"); continue
+            }
             if (m.has("const") && kind == "checkbox") log("[$key] marcado por la automatización (decisión del usuario)")
             val r = when (kind) {
                 "text" -> runStep(key, FillScripts.text(key, labels, dom, value))
                 "text_lookup" -> {
                     val t = runStep(key, FillScripts.text(key, labels, dom, value))
                     val lk = f.getJSONObject("lookup")
+                    if (lk.optString("dom") in NEVER_CLICK) { log("[$screen] STOP boton_prohibido: ${lk.optString("dom")}"); return false }
                     val lkLabels = lk.getJSONArray("button_labels").let { a -> (0 until a.length()).map { a.getString(it) } }
                     if (t?.optBoolean("ok") == true) runStep("$key:buscar", FillScripts.clickButton("$key:buscar", lkLabels, lk.optString("dom"))) else t
                 }
                 "select_native" -> runStep(key, FillScripts.selectNative(key, labels, dom, value), 30_000)
                 "checkbox" -> runStep(key, FillScripts.setCheckbox(key, labels, dom, value.toBoolean()))
+                "radio" -> {
+                    val o = f.optJSONObject("options")?.optJSONObject(value)
+                    if (o == null) { log("[$key] FALLO opcion_no_encontrada: '$value' no está en el esquema"); null }
+                    else runStep(key, FillScripts.setRadio(key, o.getJSONArray("labels").let { a -> (0 until a.length()).map { a.getString(it) } }, o.optString("id")))
+                }
+                "calendar_days" -> runStep(key, FillScripts.pickDays(key, row["mes_nombre"].orEmpty(), value.toIntOrNull() ?: 0, dom), 90_000)
                 else -> { log("[$key] tipo '$kind' no soportado"); null }
             }
             if (r?.optBoolean("ok") != true && f.optBoolean("required")) {
@@ -103,7 +130,7 @@ class FormFiller(private val webView: () -> WebView?, private val log: (String) 
                 if (ac.optString("key") == "continuar") runStep("continuar", FillScripts.buttonState("continuar", ac.optJSONObject("dom")?.optString("id").orEmpty()))
             }
         }
-        log("[$screen] LLENADO COMPLETO. Falta revisar el captcha y Continuar (humano).")
+        log("[$screen] LLENADO COMPLETO. Revisa la pantalla; «Continuar» lo pulsa el humano.")
         return true
     }
 }

@@ -72,7 +72,7 @@ class AntiCaptcha(private val filesDir: File, private val log: (String) -> Unit)
         if (spent >= capUsd()) { log("[anticaptcha] STOP tope diario alcanzado ($spent de ${capUsd()} USD, $n tareas)"); return null }
         return try {
             val task = JSONObject().put("type", "ImageToTextTask").put("body", b64).put("case", true).put("numeric", 0)
-                .put("maxLength", maxLength).put("comment", "Escriba las letras tal como se ven; distingue mayúsculas y minúsculas")
+                .put("minLength", 5).put("maxLength", maxLength).put("comment", "Escriba las letras tal como se ven; distingue mayúsculas y minúsculas")
             val created = call("createTask", JSONObject().put("clientKey", key()).put("task", task))
             if (created.optInt("errorId") != 0) { log("[anticaptcha] createTask ERROR ${created.optString("errorCode")}"); return null }
             val id = created.getLong("taskId")

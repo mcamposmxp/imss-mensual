@@ -80,9 +80,11 @@ function desc(e){ var ds=[]; for(var k in e.dataset) ds.push(k);
 var out=[]; [].slice.call(document.querySelectorAll('table')).slice(0,3).forEach(function(t){
   var hdr=[].slice.call(t.querySelectorAll('th')).map(function(h){return clean(h.innerText).substring(0,30);});
   var rows=[].slice.call(t.querySelectorAll('tr')).slice(0,6).map(function(r){
-    return [].slice.call(r.children).slice(0,10).map(function(c){
+    var rd=desc(r), rowInfo={tag:'tr',cls:rd.cls,id:rd.id,onclick:rd.onclick,data:rd.data,cursor:rd.cursor,bg:getComputedStyle(r).backgroundColor};
+    var cells=[].slice.call(r.children).slice(0,10).map(function(c){
       var kids=[].slice.call(c.querySelectorAll('*')).slice(0,8).map(desc);
-      return {cell:desc(c), text:clean(c.innerText).substring(0,40), kids:kids}; }); });
+      return {cell:desc(c), text:clean(c.innerText).substring(0,40), kids:kids}; });
+    cells.unshift({cell:rowInfo, text:'[TR]', kids:[]}); return cells; });
   out.push({headers:hdr, rows:rows}); });
 send({type:'PROBE_CELLS', url:location.href, tables:out});
 """)

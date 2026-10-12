@@ -12,8 +12,8 @@ android {
         applicationId = "com.maxipublica.imssmensual"
         minSdk = 26
         targetSdk = 35
-        versionCode = 18
-        versionName = "0.10.0"
+        versionCode = 25
+        versionName = "0.13.0"
     }
 
     buildTypes {

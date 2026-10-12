@@ -176,4 +176,70 @@ send({type:'FILL_RESULT',field:${JSONObject.quote(key)},ok:n>0,reason:n>0?'':'va
 var el=document.getElementById(${JSONObject.quote(domId)});
 send({type:'FILL_RESULT',field:${JSONObject.quote(key)},ok:!!el,message:el?('habilitado='+!el.disabled):'boton no encontrado'});
 """)
+
+    /** Radio: por id o por texto de etiqueta; solo hace clic si no está marcado y verifica .checked. */
+    fun setRadio(key: String, labels: List<String>, domId: String): String {
+        val l = labels.joinToString(prefix = "[", postfix = "]") { JSONObject.quote(it) }
+        return wrap("""$NT
+var f=findCtl($l, ${JSONObject.quote(domId)}, 'input[type=radio]');
+if(!f||f.el.type!=='radio'){ send({type:'FILL_RESULT',field:${JSONObject.quote(key)},ok:false,reason:'etiqueta_no_encontrada',message:'radio no encontrado'}); return; }
+var el=f.el;
+if(el.disabled){ send({type:'FILL_RESULT',field:${JSONObject.quote(key)},ok:false,reason:'control_deshabilitado',message:'radio deshabilitado'}); return; }
+if(!el.checked){ el.scrollIntoView({block:'center'}); await sleep(250); el.click(); await sleep(500); }
+send({type:'FILL_RESULT',field:${JSONObject.quote(key)},ok:el.checked,reason:el.checked?'':'valor_no_aplicado',via:f.via,message:el.checked?('radio marcado via='+f.via):'valor_no_aplicado'});
+""")
+    }
+
+    /** Calendario jQuery UI visible: marca los primeros [count] días hábiles (lun–vie) del mes. Verifica con el contador (#[counterId]) y con el título del mes. */
+    fun pickDays(key: String, monthName: String, count: Int, counterId: String): String = wrap("""$NT
+var count=$count, monthName=${JSONObject.quote(monthName)};
+if(count<1||count>31){ send({type:'FILL_RESULT',field:${JSONObject.quote(key)},ok:false,reason:'valor_no_aplicado',message:'numero de dias invalido'}); return; }
+function visTable(){ var ts=[].slice.call(document.querySelectorAll('table.ui-datepicker-calendar')).filter(function(t){ var r=t.getBoundingClientRect(); return r.width>0&&r.height>0; }); return ts[ts.length-1]||null; }
+var t=visTable();
+if(!t){ send({type:'FILL_RESULT',field:${JSONObject.quote(key)},ok:false,reason:'etiqueta_no_encontrada',message:'calendario no visible'}); return; }
+var dp=t.closest('.ui-datepicker'), title=dp&&dp.querySelector('.ui-datepicker-title')?nt(dp.querySelector('.ui-datepicker-title').textContent):'';
+if(monthName && title && title.indexOf(nt(monthName))===-1){ send({type:'FILL_RESULT',field:${JSONObject.quote(key)},ok:false,reason:'valor_no_aplicado',message:'el calendario muestra otro mes'}); return; }
+// días objetivo: primeras [count] celdas seleccionables en columnas lun–vie
+var days=[]; [].slice.call(t.querySelectorAll('tr')).forEach(function(tr){ [].slice.call(tr.children).forEach(function(td,i){
+  if(td.tagName==='TD'&&td.getAttribute('data-handler')==='selectDay'&&i<5&&!/unselectable|other-month/.test(td.className)) days.push((td.innerText||'').trim()); }); });
+days=days.filter(function(d){return /^\d+$/.test(d);});
+if(days.length<count){ send({type:'FILL_RESULT',field:${JSONObject.quote(key)},ok:false,reason:'valor_no_aplicado',message:'solo hay '+days.length+' dias habiles seleccionables'}); return; }
+days=days.slice(0,count);
+function click(el){ var r=el.getBoundingClientRect(), o={bubbles:true,cancelable:true,view:window,clientX:r.left+r.width/2,clientY:r.top+r.height/2};
+  ['pointerdown','mousedown','pointerup','mouseup','click'].forEach(function(n){ var E=n.indexOf('pointer')===0?PointerEvent:MouseEvent; try{ el.dispatchEvent(new E(n,o)); }catch(e){} }); }
+for(var k=0;k<days.length;k++){
+  var tb=visTable(), cell=null;   // se vuelve a buscar: el datepicker puede re-renderizar tras cada clic
+  [].slice.call(tb.querySelectorAll('td[data-handler=selectDay]')).forEach(function(td){ if((td.innerText||'').trim()===days[k]&&!/other-month|unselectable/.test(td.className)) cell=td; });
+  if(!cell){ send({type:'FILL_RESULT',field:${JSONObject.quote(key)},ok:false,reason:'valor_no_aplicado',message:'dia '+days[k]+' no encontrado'}); return; }
+  if(k===0){ cell.scrollIntoView({block:'center'}); await sleep(250); }
+  click(cell.querySelector('a')||cell); await sleep(150);
+}
+await sleep(400);
+var c=document.getElementById(${JSONObject.quote(counterId)}), got=c?parseInt(c.value,10):-1, ok=(got===count);
+send({type:'FILL_RESULT',field:${JSONObject.quote(key)},ok:ok,reason:ok?'':'valor_no_aplicado',message:'dias marcados='+count+' contador='+got+(ok?'':' (no coincide)')});
+""")
+
+    /** Ventana de términos: espera a que esté visible, se desplaza hasta el final y pulsa SOLO el botón [btnId] de esa ventana.
+     *  Verifica (P4): la ventana se cierra y la casilla [checkId] sigue marcada. Nunca toca «Continuar» ni la confirmación final. */
+    fun acceptModal(key: String, modalSel: String, btnId: String, checkId: String): String = wrap("""
+function visible(el){ var r=el.getBoundingClientRect(), cs=getComputedStyle(el); return r.width>0&&r.height>0&&cs.visibility!=='hidden'&&cs.display!=='none'; }
+function fail(reason,msg){ send({type:'FILL_RESULT',field:${JSONObject.quote(key)},ok:false,reason:reason,message:msg}); }
+var m=document.querySelector(${JSONObject.quote(modalSel)});
+if(!m){ fail('etiqueta_no_encontrada','ventana no encontrada'); return; }
+var t0=Date.now(); while(!visible(m)&&Date.now()-t0<6000){ await sleep(250); }
+if(!visible(m)){ fail('pantalla_desconocida','la ventana de terminos no esta visible (la casilla debe estar sin marcar antes)'); return; }
+var b=m.querySelector('#'+${JSONObject.quote(btnId)});
+if(!b||b.id!==${JSONObject.quote(btnId)}){ fail('etiqueta_no_encontrada','boton Aceptar de terminos no encontrado'); return; }
+// scroll interno: se recorre cada contenedor con desbordamiento hasta el final, varias veces
+for(var k=0;k<4;k++){
+  [m].concat([].slice.call(m.querySelectorAll('*'))).forEach(function(e){ if(e.scrollHeight>e.clientHeight+2){ e.scrollTop=e.scrollHeight; } });
+  await sleep(400);
+}
+b.scrollIntoView({block:'center'}); await sleep(300);
+if(b.disabled){ fail('boton_deshabilitado','el boton Aceptar sigue deshabilitado'); return; }
+b.click(); await sleep(1200);
+var closed=!visible(m), chk=document.getElementById(${JSONObject.quote(checkId)}), checked=!!chk&&chk.checked;
+var ok=closed&&checked;
+send({type:'FILL_RESULT',field:${JSONObject.quote(key)},ok:ok,reason:ok?'':'valor_no_aplicado',message:'ventana cerrada='+closed+' casilla marcada='+checked});
+""")
 }
